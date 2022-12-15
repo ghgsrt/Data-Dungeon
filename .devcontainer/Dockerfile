@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/node:alpine-3.16
+FROM node:current-alpine3.17
 
 RUN apk add --no-cache --update \
     git \
