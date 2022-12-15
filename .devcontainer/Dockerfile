@@ -44,7 +44,7 @@ RUN apk add --no-cache --update \
     webkit2gtk-dev \
     libc6-compat \
     libc-dev \
-    nodesjs \
+    nodejs \
     npm
 
 RUN npm i && npm i -g yarn
