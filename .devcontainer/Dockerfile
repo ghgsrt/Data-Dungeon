@@ -4,7 +4,8 @@ RUN apk add --no-cache --update \
     ca-certificates \
     gcc \
     libc6-compat \
-    wget
+    wget \
+    libc-dev=0.7.1-r0
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
