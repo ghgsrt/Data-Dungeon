@@ -47,5 +47,6 @@ RUN apk add --no-cache --update \
     nodejs \
     npm
 
-RUN npm i && npm i -g yarn
-RUN cargo install tauri-cli
+RUN npm i \
+    npm i -g yarn \
+    cargo install tauri-cli
