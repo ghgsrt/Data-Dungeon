@@ -31,7 +31,7 @@ RUN set -eux; \
     rustc --version;
 
 # rahr ah oora dfggdfhfh
-RUN adduser -D -G wheel -p "Howdy123!" -h /home/dungeonMaster -v dungeonMaster \
-    echo "dungeonMaster:x:1001:1001::/home/dungeonMaster:/bin/bash" | tee -a /etc/passwd
-USER dungeonMaster
-RUN sudo chown -R dungeonMaster:wheel /
+# RUN adduser -D -G wheel -p "Howdy123!" -h /home/dungeonMaster -v dungeonMaster \
+#     echo "dungeonMaster:x:1001:1001::/home/dungeonMaster:/bin/bash" | tee -a /etc/passwd
+# USER dungeonMaster
+# RUN sudo chown -R dungeonMaster:wheel /
