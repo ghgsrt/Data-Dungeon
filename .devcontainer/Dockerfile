@@ -1,7 +1,6 @@
 FROM node:current-alpine3.17
 
 RUN apk add --no-cache --update \
-    git \
     ca-certificates \
     gcc \
     libc6-compat \
