@@ -1,0 +1,79 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/typescript-node
+{
+	"name": "kinovea-companion",
+	// "image": "ghcr.io/ghgsrt/kc-devenv", // slim version
+	// "image": "ghcr.io/ghgsrt/kinovea-companion:latest",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	// 	// Update 'VARIANT' to pick a Node version: 18, 16, 14.
+	// 	// Append -bullseye or -buster to pin to an OS version.
+	// 	// Use -bullseye variants on local on arm64/Apple Silicon.
+	// 	"args": {
+	// 		"VARIANT": "16-bullseye"
+	// 	}
+	// 	// "cacheFrom": "ghcr.io/ghgsrt/kinovea-companion"
+	// },
+	"containerEnv": {
+		"DISPLAY": "host.docker.internal:0.0",
+		"NO_AT_BRIDGE": "1"
+	},
+
+	// Configure tool-specific properties.
+	"customizations": {
+		// Configure properties specific to VS Code.
+		"vscode": {
+			// Add the IDs of extensions you want installed when the container is created.
+			"extensions": [
+				"dbaeumer.vscode-eslint",
+				"svelte.svelte-vscode",
+				"golang.go",
+				"formulahendry.auto-rename-tag",
+				"aaron-bond.better-comments",
+				"wayou.vscode-todo-highlight",
+				"vscode-icons-team.vscode-icons",
+				"kamikillerto.vscode-colorize",
+				"pranaygp.vscode-css-peek",
+				"eamodio.gitlens",
+				"wix.vscode-import-cost",
+				"visualstudioexptteam.vscodein",
+				"visualstudioexptteam.intellicode-api-usage-examples",
+				"christian-kohler.path-intellisense",
+				"esbenp.prettier-vscode",
+				"ardenivanov.svelte-intellisense",
+				"tauri-apps.tauri-vscode",
+				"rust-lang.rust-analyzer",
+				"vunguyentuan.vscode-postcss",
+				"bungcip.better-toml"
+				// "editorconfig.editorconfig"
+			],
+			"settings": {
+				"editor.codeActionsOnSave": {
+					"source.fixAll": true
+				},
+				"editor.formatOnSave": true,
+				"editor.defaultFormatter": "esbenp.prettier-vscode"
+			}
+		}
+	},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [1420],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "sh ./.devcontainer/scripts/postCreate.sh",
+
+	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "dungeonMaster"
+	// "features": {
+	// 	"desktop-lite": {
+	// 		"password":  "",
+	// 		"webPort": "34115"
+	// 	}
+	// // 	// 	"git": "latest",
+	// // 	// 	"github-cli": "latest",
+	// // 	// 	// "golang": "latest",
+	// // 	"powershell": "latest"
+	// }
+}

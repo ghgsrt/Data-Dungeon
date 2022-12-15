@@ -1,0 +1,27 @@
+{
+	"root": true,
+	"parser": "@typescript-eslint/parser",
+	"parserOptions": {
+		"project": ["./tsconfig.json"],
+		"ecmaVersion": 9,
+		"sourceType": "module"
+	},
+	"rules": {
+		"import/no-extraneous-dependencies": ["error", { "devDependencies": true }],
+		"import/no-mutable-exports": 0,
+		"no-labels": 0,
+		"no-restricted-syntax": 0,
+		"react/jsx-filename-extension": 0 // just to shut up an airbnb related error
+	},
+	"plugins": ["@typescript-eslint", "solid", "import"],
+	"extends": [
+		"airbnb-typescript",
+		"plugin:@typescript-eslint/recommended",
+		"plugin:@typescript-eslint/recommended-requiring-type-checking",
+		"plugin:@typescript-eslint/strict",
+		"plugin:eslint-comments/recommended",
+		"plugin:promise/recommended",
+		"plugin:solid/typescript",
+		"prettier"
+	]
+}

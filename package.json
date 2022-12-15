@@ -1,0 +1,49 @@
+{
+  "name": "data-dungeon",
+  "version": "0.0.0",
+  "description": "",
+  "license": "MIT",
+  "scripts": {
+    "prepare": "husky install",
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview",
+    "tauri": "tauri"
+  },
+  "format-staged": {
+		"*": [
+			"prettier --write --ignore-unknown"
+		]
+	},
+  "devDependencies": {
+    "@playwright/test": "^1.28.1",
+    "@tauri-apps/cli": "^1.2.2",
+    "@types/node": "^18.7.10",
+    "@typescript-eslint/eslint-plugin": "^5.46.1",
+    "@typescript-eslint/parser": "^5.46.1",
+    "alex": "^11.0.0",
+    "eslint": "^8.29.0",
+    "eslint-config-airbnb-typescript": "^17.0.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-eslint-comments": "^3.2.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-solid": "^0.9.1",
+    "husky": "^8.0.2",
+    "lint-staged": "^13.1.0",
+    "prettier": "^2.8.1",
+    "stylelint": "^14.16.0",
+    "stylelint-config-html": "^1.1.0",
+    "stylelint-config-prettier": "^9.0.4",
+    "stylelint-config-standard": "^29.0.0",
+    "tailwindcss": "^3.2.4",
+    "typescript": "^4.7.4",
+    "vite": "^4.0.0",
+    "vite-plugin-solid": "^2.3.0"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^1.2.0",
+    "solid-js": "^1.4.7"
+  }
+}
