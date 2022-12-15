@@ -17,7 +17,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
-          password: ${{ secrets.GHCR_PASS }}
+          password: ${{ secrets.GITHUB_TOKEN }}
   
       - name: Build Container Image
         run: docker build . --file .devcontainer/Dockerfile --tag ghcr.io/${{ github.repository }} 

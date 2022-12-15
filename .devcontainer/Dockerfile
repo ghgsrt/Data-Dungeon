@@ -30,7 +30,7 @@ RUN set -eux; \
     cargo --version; \
     rustc --version;
 
-# rahr ah oora dfg
+# rahr ah oora dfggdfhfh
 RUN adduser -D -G wheel -p "Howdy123!" -h /home/dungeonMaster -v dungeonMaster \
     echo "dungeonMaster:x:1001:1001::/home/dungeonMaster:/bin/bash" | tee -a /etc/passwd
 USER dungeonMaster
