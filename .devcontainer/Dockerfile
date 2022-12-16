@@ -82,15 +82,45 @@
 FROM qmcgaw/rustdevcontainer
 
 RUN apk add --no-cache --update \
-    gtk+3.0-dev \
-    webkit2gtk-dev \
     libc6-compat \
     libc-dev \
+    webkit2gtk-dev \
+    gtk+3.0-dev \
+    openssl-dev \
     nodejs \
-    npm
+    npm \
+    build-base \
+    pkgconf
 
 RUN cargo install tauri-cli
 
 # Shell setup
 # COPY shell/.zshrc-specific shell/.welcome.sh /root/
 # RUN mkdir ~/.zfunc && rustup completions zsh > ~/.zfunc/_rustup
+
+#FROM debian:bullseye
+# FROM nvidia/opengl:1.0-glvnd-runtime-ubuntu20.04
+
+# ENV DEBIAN_FRONTEND=noninteractive
+
+# # install dependencies from package manager
+# RUN apt update && \
+#     apt install -y libwebkit2gtk-4.0-dev \
+#     build-essential \
+#     curl \
+#     wget \
+#     libssl-dev \
+#     libgtk-3-dev \
+#     libayatana-appindicator3-dev \
+#     librsvg2-dev
+
+# # install rust
+# RUN curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh -s -- -y
+
+# # install nodejs, npm & yarn
+# RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && apt-get install -y nodejs
+# RUN npm install -g yarn
+
+# # create 'dev' user
+# RUN mkdir /home/dev
+# RUN useradd -u 1000 dev && chown -R dev /home/dev

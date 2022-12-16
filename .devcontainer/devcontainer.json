@@ -1,9 +1,16 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/typescript-node
 {
-	"name": "kinovea-companion",
+	
+	"name": "data-dungeon",
 	// "image": "ghcr.io/ghgsrt/kc-devenv", // slim version
 	"image": "ghcr.io/ghgsrt/data-dungeon:latest",
+	// "dockerComposeFile": ["docker-compose.yml"],
+	// "service": "vscode",
+	// "runServices": ["vscode"],
+	// "shutdownAction": "stopCompose",
+	"postCreateCommand": "./.devcontainer/scripts/postCreate.sh",
+	// "workspaceFolder": "/workspace",
 	// "build": {
 	// 	"dockerfile": "Dockerfile"
 	// },
@@ -42,7 +49,11 @@
 				"tauri-apps.tauri-vscode",
 				"rust-lang.rust-analyzer",
 				"vunguyentuan.vscode-postcss",
-				"bungcip.better-toml"
+				"bungcip.better-toml",
+				"stkb.rewrap",
+				"github.vscode-pull-request-github",
+				"shardulm94.trailing-spaces",
+				"ms-azuretools.vscode-docker"
 				// "editorconfig.editorconfig"
 			],
 			"settings": {
@@ -50,19 +61,27 @@
 					"source.fixAll": true
 				},
 				"editor.formatOnSave": true,
-				"editor.defaultFormatter": "esbenp.prettier-vscode"
+				"editor.defaultFormatter": "esbenp.prettier-vscode",
+				"files.eol": "\n",
+				"[rust]": {
+					"editor.defaultFormatter": "rust-lang.rust-analyzer"
+				},
+				"editor.codeActionsOnSaveTimeout": 3000,
+				"rust-analyzer.serverPath": "/usr/local/bin/rust-analyzer"
 			}
 		}
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	"forwardPorts": [1420]
+	"forwardPorts": [1420, 34115],
+	"workspaceMount": "source=${localWorkspaceFolder},target=/home/dev/workspace/${localWorkspaceFolderBasename},type=bind",
+	"workspaceFolder": "/home/dev/workspace/${localWorkspaceFolderBasename}"
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "sh ./.devcontainer/scripts/postCreate.sh",
 
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
-	// "remoteUser": "root"
+	// "remoteUser": "dev"
 	// "features": {
 	// 	"desktop-lite": {
 	// 		"password":  "",
