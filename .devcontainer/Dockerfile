@@ -44,9 +44,8 @@ RUN apk add --no-cache --update \
     webkit2gtk-dev \
     libc6-compat \
     libc-dev \
+    openssl \
     nodejs \
     npm
 
-RUN npm i; \
-    npm i -g yarn; \
-    cargo install tauri-cli
+RUN cargo install tauri-cli

@@ -27,8 +27,6 @@
 			// Add the IDs of extensions you want installed when the container is created.
 			"extensions": [
 				"dbaeumer.vscode-eslint",
-				"svelte.svelte-vscode",
-				"golang.go",
 				"formulahendry.auto-rename-tag",
 				"aaron-bond.better-comments",
 				"wayou.vscode-todo-highlight",
@@ -41,7 +39,6 @@
 				"visualstudioexptteam.intellicode-api-usage-examples",
 				"christian-kohler.path-intellisense",
 				"esbenp.prettier-vscode",
-				"ardenivanov.svelte-intellisense",
 				"tauri-apps.tauri-vscode",
 				"rust-lang.rust-analyzer",
 				"vunguyentuan.vscode-postcss",
@@ -59,13 +56,13 @@
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	"forwardPorts": [1420],
+	"forwardPorts": [1420]
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "sh ./.devcontainer/scripts/postCreate.sh",
 
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
-	"remoteUser": "root"
+	// "remoteUser": "root"
 	// "features": {
 	// 	"desktop-lite": {
 	// 		"password":  "",
