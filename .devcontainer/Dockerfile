@@ -39,13 +39,14 @@
 FROM rust:alpine3.17
 
 RUN apk add --no-cache --update \
-    pkgconf \
     gtk+3.0-dev \
     webkit2gtk-dev \
     libc6-compat \
     libc-dev \
     openssl \
+    openssl-dev \
     nodejs \
-    npm
+    npm \
+    pkgconf
 
 RUN cargo install tauri-cli
