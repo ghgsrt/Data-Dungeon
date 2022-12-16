@@ -81,6 +81,14 @@
 
 FROM qmcgaw/rustdevcontainer
 
+RUN apk add --no-cache --update \
+    gtk+3.0-dev \
+    webkit2gtk-dev \
+    libc6-compat \
+    libc-dev \
+    nodejs \
+    npm
+
 RUN cargo install tauri-cli
 
 # Shell setup
