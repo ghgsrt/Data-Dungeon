@@ -90,7 +90,8 @@ RUN apk add --no-cache --update \
     nodejs \
     npm \
     build-base \
-    pkgconf
+    pkgconf \
+    libx11
 
 RUN cargo install tauri-cli
 
