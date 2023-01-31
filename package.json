@@ -11,10 +11,10 @@
     "tauri": "tauri"
   },
   "format-staged": {
-		"*": [
-			"prettier --write --ignore-unknown"
-		]
-	},
+    "*": [
+      "prettier --write --ignore-unknown"
+    ]
+  },
   "devDependencies": {
     "@playwright/test": "^1.28.1",
     "@tauri-apps/cli": "^1.2.2",
@@ -41,6 +41,8 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^1.2.0",
-    "solid-js": "^1.4.7"
+    "@types/three": "^0.149.0",
+    "solid-js": "^1.4.7",
+    "three": "^0.149.0"
   }
 }
