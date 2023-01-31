@@ -43,6 +43,7 @@
     "@tauri-apps/api": "^1.2.0",
     "@types/three": "^0.149.0",
     "solid-js": "^1.4.7",
-    "three": "^0.149.0"
+    "three": "^0.149.0",
+    "three-addons": "^1.2.0"
   }
 }
