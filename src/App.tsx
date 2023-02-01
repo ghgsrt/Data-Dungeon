@@ -1,6 +1,6 @@
 import { createSignal, onMount } from 'solid-js';
 import * as THREE from 'three';
-import init from './TestModel.js';
+import init from './JumpModel.js';
 
 // import Test from './components/Test';
 import './App.css';

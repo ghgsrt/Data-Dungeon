@@ -4,6 +4,7 @@ import Stats from 'three/addons/libs/stats.module.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 
 let scene, renderer, camera, stats;
 let model, skeleton, mixer, clock;
@@ -16,6 +17,7 @@ const baseActions = {
 	idle: { weight: 1 },
 	walk: { weight: 0 },
 	run: { weight: 0 },
+	jump: { weight: 1},
 };
 const additiveActions = {
 	sneak_pose: { weight: 0 },
@@ -61,7 +63,7 @@ export default function init(container) {
 	scene.add(mesh);
 
 	const loader = new GLTFLoader();
-	loader.load('models/gltf/Xbot.glb', function (gltf) {
+	loader.load('models/gltf/Jump.glb', function (gltf) {
 		model = gltf.scene;
 		scene.add(model);
 
