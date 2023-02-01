@@ -1,8 +1,8 @@
 import { createStore, produce } from 'solid-js/store';
 import useEventListener from './useEventListener';
 
-export type ChannelConfig = Record<string, string>;
-export type InputConfig = Record<string, string[] | ChannelConfig>;
+export type StringMap = Record<string, string>;
+export type InputConfig = Record<string, string[] | StringMap>;
 type InputChannels = Record<string, string[]>;
 
 function useInputs() {
@@ -31,48 +31,48 @@ function useInputs() {
 
 	const listen = (_inputConfig: InputConfig) => {
 		inputConfig = _inputConfig;
-		const keyMap: Record<string, string> = {};
+		const keyToChannelMap: StringMap = {};
 
 		for (const channel in inputConfig) {
 			addChannel(channel);
 
 			for (const key in inputConfig[channel]) {
 				if (Array.isArray(inputConfig[channel])) {
-					keyMap[(inputConfig[channel] as string[])[parseInt(key)]] =
+					keyToChannelMap[(inputConfig[channel] as string[])[parseInt(key)]] =
 						channel;
-				} else keyMap[key] = channel;
+				} else keyToChannelMap[key] = channel;
 			}
 		}
 
-		const determineTrueKey = (e: Event) => {
+		const determineValue = (e: Event) => {
 			const key = (e as KeyboardEvent).key;
-			if (!keyMap[key])
-				return { shouldReturn: true, channel: '', trueKey: '' };
+			if (!keyToChannelMap[key])
+				return { shouldReturn: true, channel: '', value: '' };
 			e.preventDefault();
 
-			const channel = keyMap[key];
-			const channelConfig = inputConfig[channel] as ChannelConfig;
+			const channel = keyToChannelMap[key];
+			const keyToValueMap = inputConfig[channel] as StringMap;
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-			const trueKey = channelConfig[key] ?? key;
+			const value = keyToValueMap[key] ?? key;
 
-			return { shouldReturn: false, channel, trueKey };
+			return { shouldReturn: false, channel, value };
 		};
 
 		const handleKeyDown = (e: Event) => {
-			const { shouldReturn, channel, trueKey } = determineTrueKey(e);
+			const { shouldReturn, channel, value } = determineValue(e);
 
-			if (shouldReturn || inputChannels[channel].includes(trueKey))
+			if (shouldReturn || inputChannels[channel].includes(value))
 				return;
 
-			pushToChannel(channel, trueKey);
+			pushToChannel(channel, value);
 		};
 
 		const handleKeyUp = (e: Event) => {
-			const { shouldReturn, channel, trueKey } = determineTrueKey(e);
+			const { shouldReturn, channel, value } = determineValue(e);
 
 			if (shouldReturn) return;
 
-			removeFromChannel(channel, trueKey);
+			removeFromChannel(channel, value);
 		};
 
 		useEventListener('keydown', handleKeyDown);

@@ -1,20 +1,20 @@
 import { onMount, For } from 'solid-js';
-import useInputs from '../../hooks/useInputs';
+import useInputs, { InputConfig } from '../../hooks/useInputs';
 
-const inputConfig = {
+const inputConfig: InputConfig = {
 	move: {
 		w: 'x-',
 		W: 'x-',
-        ArrowUp: 'x-',
+		ArrowUp: 'x-',
 		a: 'y-',
 		A: 'y-',
-        ArrowLeft: 'y-',
+		ArrowLeft: 'y-',
 		s: 'x',
 		S: 'x',
-        ArrowRight: 'x',
+		ArrowRight: 'x',
 		d: 'y',
 		D: 'y',
-        ArrowDown: 'y',
+		ArrowDown: 'y',
 	},
 	jump: [' '],
 };
