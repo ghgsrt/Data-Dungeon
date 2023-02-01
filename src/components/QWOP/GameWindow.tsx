@@ -1,26 +1,24 @@
 import { onMount, For } from 'solid-js';
 import useInputs, { InputConfig } from '../../hooks/useInputs';
+import { Keys } from '../../enums/KeyCodes';
 
-const inputConfig: InputConfig = {
-	move: {
-		w: 'x-',
-		W: 'x-',
-		ArrowUp: 'x-',
-		a: 'y-',
-		A: 'y-',
-		ArrowLeft: 'y-',
-		s: 'x',
-		S: 'x',
-		ArrowRight: 'x',
-		d: 'y',
-		D: 'y',
-		ArrowDown: 'y',
+const inputConfig: InputConfig<Keys> = {
+	channels: {
+		move: {
+			'x-': ['w', 'W', 'ArrowUp'],
+			'y-': ['a', 'A', 'ArrowLeft'],
+			x: ['s', 'S', 'ArrowRight'],
+			y: ['d', 'D', 'ArrowDown'],
+		},
+		jump: [' '],
 	},
-	jump: [' '],
+	options: {
+		use: 'key',
+	},
 };
 
 function GameWindow() {
-	const { inputChannels, listen } = useInputs();
+	const { outputChannels, listen } = useInputs();
 
 	onMount(() => {
 		listen(inputConfig);
@@ -33,10 +31,10 @@ function GameWindow() {
 					<div class="w-10 h-14 bg-red-500 absolute bottom-0 left-14" />
 				</div>
 				<div class="flex-1 bg-green-700">
-					<For each={Object.keys(inputChannels)}>
+					<For each={Object.keys(outputChannels)}>
 						{(channel) => (
 							<p>
-								{channel}: '{inputChannels[channel]}'
+								{channel}: '{outputChannels[channel]}'
 							</p>
 						)}
 					</For>

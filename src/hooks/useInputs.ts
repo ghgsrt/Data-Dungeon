@@ -1,26 +1,37 @@
 import { createStore, produce } from 'solid-js/store';
 import useEventListener from './useEventListener';
+import { Keys, Codes } from '../enums/KeyCodes';
 
-export type StringMap = Record<string, string>;
-export type InputConfig = Record<string, string[] | StringMap>;
-type InputChannels = Record<string, string[]>;
+type KeysOrCodes = Keys | Codes;
+type StringMap = Record<string, string>;
+type Channels<T = string> = Record<string, T[]>;
+export type InputChannels<T extends KeysOrCodes> = Record<
+	string,
+	T[] | Channels<T>
+>;
+export interface InputOptions {
+	use: 'key' | 'code';
+}
+export interface InputConfig<T extends KeysOrCodes> {
+	channels: InputChannels<T>;
+	options: InputOptions;
+}
 
 function useInputs() {
-	const [inputChannels, setInputChannels] = createStore<InputChannels>({});
-	let inputConfig: InputConfig;
+	const [outputChannels, setOutputChannels] = createStore<Channels>({});
 
 	const addChannel = (channel: string) => {
-		setInputChannels((prev) => ({ ...prev, [channel]: [] }));
+		setOutputChannels((prev) => ({ ...prev, [channel]: [] }));
 	};
 	const pushToChannel = (channel: string, item: string) => {
-		setInputChannels(
+		setOutputChannels(
 			produce((channels) => {
 				channels[channel].unshift(item);
 			})
 		);
 	};
 	const removeFromChannel = (channel: string, item: string) => {
-		setInputChannels(
+		setOutputChannels(
 			produce((channels) => {
 				channels[channel] = channels[channel].filter(
 					(key) => key !== item
@@ -29,49 +40,57 @@ function useInputs() {
 		);
 	};
 
-	const listen = (_inputConfig: InputConfig) => {
-		inputConfig = _inputConfig;
-		const keyToChannelMap: StringMap = {};
+	const listen = <T extends KeysOrCodes>(inputConfig: InputConfig<T>) => {
+		const inputChannels = inputConfig.channels;
+		const keyType = inputConfig.options.use;
 
-		for (const channel in inputConfig) {
+		const keyToChannelMap: StringMap = {};
+		const keyToValueMap: StringMap = {};
+		for (const channel in inputChannels) {
 			addChannel(channel);
 
-			for (const key in inputConfig[channel]) {
-				if (Array.isArray(inputConfig[channel])) {
-					keyToChannelMap[(inputConfig[channel] as string[])[parseInt(key)]] =
-						channel;
-				} else keyToChannelMap[key] = channel;
+			for (const key in inputChannels[channel]) {
+				if (Array.isArray(inputChannels[channel])) {
+					const input = (inputChannels[channel] as T[])[
+						parseInt(key)
+					];
+					keyToChannelMap[input] = channel;
+					keyToValueMap[input] = input;
+				} else
+					(inputChannels[channel] as Channels<T>)[key].forEach(
+						(input) => {
+							keyToChannelMap[input] = channel;
+							keyToValueMap[input] = key;
+						}
+					);
 			}
 		}
 
 		const determineValue = (e: Event) => {
-			const key = (e as KeyboardEvent).key;
-			if (!keyToChannelMap[key])
-				return { shouldReturn: true, channel: '', value: '' };
-			e.preventDefault();
+			const key = (e as KeyboardEvent)[keyType];
 
-			const channel = keyToChannelMap[key];
-			const keyToValueMap = inputConfig[channel] as StringMap;
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-			const value = keyToValueMap[key] ?? key;
-
-			return { shouldReturn: false, channel, value };
+			return {
+				channel: keyToChannelMap[key],
+				value: keyToValueMap[key],
+				shouldReturn: !keyToChannelMap[key],
+			};
 		};
 
 		const handleKeyDown = (e: Event) => {
-			const { shouldReturn, channel, value } = determineValue(e);
+			const { channel, value, shouldReturn } = determineValue(e);
 
-			if (shouldReturn || inputChannels[channel].includes(value))
-				return;
+			if (shouldReturn || outputChannels[channel].includes(value)) return;
 
+			e.preventDefault();
 			pushToChannel(channel, value);
 		};
 
 		const handleKeyUp = (e: Event) => {
-			const { shouldReturn, channel, value } = determineValue(e);
+			const { channel, value, shouldReturn } = determineValue(e);
 
 			if (shouldReturn) return;
 
+			e.preventDefault();
 			removeFromChannel(channel, value);
 		};
 
@@ -79,7 +98,7 @@ function useInputs() {
 		useEventListener('keyup', handleKeyUp);
 	};
 
-	return { inputChannels, listen };
+	return { outputChannels, listen };
 }
 
 export default useInputs;
