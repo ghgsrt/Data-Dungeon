@@ -7,6 +7,10 @@ import Default from './components/Default';
 function App() {
 	const [currentDemoTitle, setCurrentDemoTitle] = createSignal<string>('');
 
+	//! ADD YOUR DEMO HERE
+	//? Key: title of your demo
+	//? Value: your demo component
+	//* that's all you have to do!
 	const demoMenu: Record<string, JSX.Element> = {
 		Default: <Default />,
 		'useInput Example': <InputExample />,
@@ -15,7 +19,7 @@ function App() {
 	};
 
 	return (
-		<div class="flex w-screen h-screen bg-gray-800">
+		<div class="flex w-screen h-screen bg-gray-800 overflow-hidden">
 			<div class="flex flex-col w-min h-screen">
 				<For each={Object.keys(demoMenu)}>
 					{(demoTitle) => (

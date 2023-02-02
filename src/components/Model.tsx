@@ -8,7 +8,7 @@ function Model() {
 	onMount(() => initModel(container));
 	onCleanup(() => destroyModel());
 
-	return <div ref={container} id="container" />;
+	return <div ref={container} id="container" class="w-full h-full" />;
 }
 
 export default Model;
