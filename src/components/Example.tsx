@@ -3,7 +3,7 @@ import { onMount, createSignal, createEffect } from 'solid-js';
 // "static" variable
 const greetList = ['World', 'Sherman', 'Bryonna', 'Colin'];
 
-function Default() {
+function Example() {
 	// reactive variables
 	const [greeting, setGreeting] = createSignal(greetList[0]);
 	const [counter, setCounter] = createSignal(0);
@@ -23,16 +23,14 @@ function Default() {
 	return (
 		<>
 			<button
-				class="w-24 h-10 ml-10 mt-10 transition-colors rounded-xl bg-gray-200 hover:bg-gray-300"
+				class="w-24 h-10 m-10 rounded-xl bg-gray-200 hover:bg-gray-300 transition-colors"
 				onClick={() => setCounter((prev) => prev + 1)}
 			>
 				Next
 			</button>
-			<h1 class="ml-10 mt-10 text-8xl text-gray-200">
-				Hello, {greeting()}!
-			</h1>
+			<h1 class="ml-10 text-8xl text-gray-200">Hello, {greeting()}!</h1>
 		</>
 	);
 }
 
-export default Default;
+export default Example;
