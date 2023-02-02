@@ -1,6 +1,6 @@
 import { onMount, For } from 'solid-js';
 import useInputs, { InputConfig } from '../../hooks/useInputs';
-import { Keys } from '../../enums/KeyCodes';
+import { Keys } from '../../types/KeyCodes';
 
 const inputConfig: InputConfig<Keys> = {
 	channels: {

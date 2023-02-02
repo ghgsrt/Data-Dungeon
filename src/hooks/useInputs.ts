@@ -1,6 +1,6 @@
 import { createStore, produce } from 'solid-js/store';
 import useEventListener from './useEventListener';
-import { Keys, Codes } from '../enums/KeyCodes';
+import { Keys, Codes } from '../types/KeyCodes';
 
 type KeysOrCodes = Keys | Codes;
 type StringMap = Record<string, string>;
