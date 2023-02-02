@@ -3,7 +3,6 @@ import useEventListener from './useEventListener';
 import { Keys, Codes } from '../types/KeyCodes';
 
 type KeysOrCodes = Keys | Codes;
-type StringMap = Record<string, string>;
 type Channels<T = string> = Record<string, T[]>;
 export type InputChannels<T extends KeysOrCodes> = Record<
 	string,
@@ -19,6 +18,7 @@ export interface InputConfig<T extends KeysOrCodes> {
 
 function useInputs() {
 	const [outputChannels, setOutputChannels] = createStore<Channels>({});
+	const unsubList: (() => void)[] = [];
 
 	const addChannel = (channel: string) => {
 		setOutputChannels((prev) => ({ ...prev, [channel]: [] }));
@@ -33,35 +33,50 @@ function useInputs() {
 	const removeFromChannel = (channel: string, item: string) => {
 		setOutputChannels(
 			produce((channels) => {
-				channels[channel] = channels[channel].filter(
-					(key) => key !== item
-				);
+				const idxToRemove = channels[channel].indexOf(item);
+				if (idxToRemove > -1) channels[channel].splice(idxToRemove, 1);
 			})
 		);
 	};
+	const clearOutputChannels = () => {
+		setOutputChannels({});
+		unsubList.forEach((unsub) => unsub());
+	};
 
 	const listen = <T extends KeysOrCodes>(inputConfig: InputConfig<T>) => {
+		clearOutputChannels();
+
 		const inputChannels = inputConfig.channels;
 		const keyType = inputConfig.options.use;
 
-		const keyToChannelMap: StringMap = {};
-		const keyToValueMap: StringMap = {};
+		const keyToChannelsMap: Record<string, Set<string>> = {};
+		const keyToValuesMap: Record<string, Record<string, Set<string>>> = {};
+
+		const addToMaps = (input: T, channel: string, key?: string) => {
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+			if (!keyToChannelsMap[input]) keyToChannelsMap[input] = new Set();
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+			if (!keyToValuesMap[input]) keyToValuesMap[input] = {};
+			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+			if (!keyToValuesMap[input][channel])
+				keyToValuesMap[input][channel] = new Set();
+
+			keyToChannelsMap[input].add(channel);
+			keyToValuesMap[input][channel].add(key ?? input);
+		};
+
 		for (const channel in inputChannels) {
 			addChannel(channel);
 
 			for (const key in inputChannels[channel]) {
 				if (Array.isArray(inputChannels[channel])) {
-					const input = (inputChannels[channel] as T[])[
-						parseInt(key)
-					];
-					keyToChannelMap[input] = channel;
-					keyToValueMap[input] = input;
+					addToMaps(
+						(inputChannels[channel] as T[])[parseInt(key)],
+						channel
+					);
 				} else {
 					(inputChannels[channel] as Channels<T>)[key].forEach(
-						(input) => {
-							keyToChannelMap[input] = channel;
-							keyToValueMap[input] = key;
-						}
+						(input) => addToMaps(input, channel, key)
 					);
 				}
 			}
@@ -71,32 +86,45 @@ function useInputs() {
 			const key = (e as KeyboardEvent)[keyType];
 
 			return {
-				channel: keyToChannelMap[key],
-				value: keyToValueMap[key],
-				shouldReturn: !keyToChannelMap[key],
+				channels: keyToChannelsMap[key],
+				values: keyToValuesMap[key],
+				shouldReturn: !keyToChannelsMap[key],
 			};
 		};
 
 		const handleKeyDown = (e: Event) => {
-			const { channel, value, shouldReturn } = determineValue(e);
+			const { channels, values, shouldReturn } = determineValue(e);
+			if (shouldReturn) return;
 
-			if (shouldReturn || outputChannels[channel].includes(value)) return;
+			const keyAlreadyPressed = [...channels].every((channel) =>
+				[...values[channel]].every((value) =>
+					outputChannels[channel].includes(value)
+				)
+			);
+			if (keyAlreadyPressed) return;
 
 			e.preventDefault();
-			pushToChannel(channel, value);
+			channels.forEach((channel) =>
+				values[channel].forEach((value) =>
+					pushToChannel(channel, value)
+				)
+			);
 		};
 
 		const handleKeyUp = (e: Event) => {
-			const { channel, value, shouldReturn } = determineValue(e);
-
+			const { channels, values, shouldReturn } = determineValue(e);
 			if (shouldReturn) return;
 
 			e.preventDefault();
-			removeFromChannel(channel, value);
+			channels.forEach((channel) =>
+				values[channel].forEach((value) =>
+					removeFromChannel(channel, value)
+				)
+			);
 		};
 
-		useEventListener('keydown', handleKeyDown);
-		useEventListener('keyup', handleKeyUp);
+		unsubList.push(useEventListener('keydown', handleKeyDown).unsubscribe);
+		unsubList.push(useEventListener('keyup', handleKeyUp).unsubscribe);
 	};
 
 	return { outputChannels, listen };
