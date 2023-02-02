@@ -2,7 +2,7 @@ import { createSignal, For, JSX } from 'solid-js';
 import GameWindow from './components/QWOP/GameWindow';
 import Model from './components/Model.jsx';
 import InputExample from './components/InputExample';
-import Default from './components/Default';
+import Example from './components/Example';
 
 function App() {
 	const [currentDemoTitle, setCurrentDemoTitle] = createSignal<string>('');
@@ -12,7 +12,7 @@ function App() {
 	//? Value: your demo component
 	//* that's all you have to do!
 	const demoMenu: Record<string, JSX.Element> = {
-		Default: <Default />,
+		'Example Comp.': <Example />,
 		'useInput Example': <InputExample />,
 		Model: <Model />,
 		QWOP: <GameWindow />,
@@ -26,7 +26,7 @@ function App() {
 						<div
 							class={`flex-1 flex justify-center items-center p-1 
 									bg-gray-300 hover:bg-gray-400 
-									  select-none cursor-pointer 
+									  select-none cursor-pointer text-center
 									  shadow-inner transition-colors
 									  active:bg-gray-400
 									  ${currentDemoTitle() === demoTitle ? 'bg-gray-400' : ''}`}
