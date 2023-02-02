@@ -18,6 +18,7 @@ export interface InputConfig<T extends KeysOrCodes> {
 
 function useInputs() {
 	const [outputChannels, setOutputChannels] = createStore<Channels>({});
+	const [keysPressed, setKeysPressed] = createStore<string[]>([]);
 	const unsubList: (() => void)[] = [];
 
 	const addChannel = (channel: string) => {
@@ -33,7 +34,7 @@ function useInputs() {
 	const removeFromChannel = (channel: string, item: string) => {
 		setOutputChannels(
 			produce((channels) => {
-				const idxToRemove = channels[channel].indexOf(item);
+				const idxToRemove = channels[channel].lastIndexOf(item);
 				if (idxToRemove > -1) channels[channel].splice(idxToRemove, 1);
 			})
 		);
@@ -41,6 +42,22 @@ function useInputs() {
 	const clearOutputChannels = () => {
 		setOutputChannels({});
 		unsubList.forEach((unsub) => unsub());
+	};
+
+	const pressKey = (key: string) => {
+		setKeysPressed(
+			produce((keys) => {
+				keys.push(key);
+			})
+		);
+	};
+	const releaseKey = (key: string) => {
+		setKeysPressed(
+			produce((keys) => {
+				const idxToRemove = keys.indexOf(key);
+				if (idxToRemove > -1) keys.splice(idxToRemove, 1);
+			})
+		);
 	};
 
 	const listen = <T extends KeysOrCodes>(inputConfig: InputConfig<T>) => {
@@ -86,41 +103,41 @@ function useInputs() {
 			const key = (e as KeyboardEvent)[keyType];
 
 			return {
+				key,
 				channels: keyToChannelsMap[key],
 				values: keyToValuesMap[key],
 				shouldReturn: !keyToChannelsMap[key],
 			};
 		};
 
-		const handleKeyDown = (e: Event) => {
-			const { channels, values, shouldReturn } = determineValue(e);
-			if (shouldReturn) return;
-
-			const keyAlreadyPressed = [...channels].every((channel) =>
-				[...values[channel]].every((value) =>
-					outputChannels[channel].includes(value)
-				)
-			);
-			if (keyAlreadyPressed) return;
-
-			e.preventDefault();
+		const mutOutChannels = (
+			callback: typeof pushToChannel,
+			channels: Set<string>,
+			values: Record<string, Set<string>>
+		) => {
 			channels.forEach((channel) =>
-				values[channel].forEach((value) =>
-					pushToChannel(channel, value)
-				)
+				values[channel].forEach((value) => callback(channel, value))
 			);
 		};
 
-		const handleKeyUp = (e: Event) => {
-			const { channels, values, shouldReturn } = determineValue(e);
-			if (shouldReturn) return;
+		const handleKeyDown = (e: Event) => {
+			const { key, channels, values, shouldReturn } = determineValue(e);
 
+			if (shouldReturn || keysPressed.includes(key)) return;
 			e.preventDefault();
-			channels.forEach((channel) =>
-				values[channel].forEach((value) =>
-					removeFromChannel(channel, value)
-				)
-			);
+
+			mutOutChannels(pushToChannel, channels, values);
+			pressKey(key);
+		};
+
+		const handleKeyUp = (e: Event) => {
+			const { key, channels, values, shouldReturn } = determineValue(e);
+
+			if (shouldReturn || !keysPressed.includes(key)) return;
+			e.preventDefault();
+
+			mutOutChannels(removeFromChannel, channels, values);
+			releaseKey(key);
 		};
 
 		unsubList.push(useEventListener('keydown', handleKeyDown).unsubscribe);
