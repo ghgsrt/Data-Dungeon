@@ -3,10 +3,19 @@ import { onMount, onCleanup } from 'solid-js';
 function useEventListener(
 	event: string,
 	callback: EventListenerOrEventListenerObject,
-	options = false
+	auto = true
 ) {
-	onMount(() => window.addEventListener(event, callback, options));
-	onCleanup(() => window.removeEventListener(event, callback, options));
+	const subscribe = (options = false) =>
+		window.addEventListener(event, callback, options);
+	const unsubscribe = (options = false) =>
+		window.removeEventListener(event, callback, options);
+
+	if (auto) {
+		onMount(subscribe);
+		onCleanup(unsubscribe);
+	}
+
+	return { subscribe, unsubscribe };
 }
 
 export default useEventListener;
