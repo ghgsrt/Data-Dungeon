@@ -56,13 +56,14 @@ function useInputs() {
 					];
 					keyToChannelMap[input] = channel;
 					keyToValueMap[input] = input;
-				} else
+				} else {
 					(inputChannels[channel] as Channels<T>)[key].forEach(
 						(input) => {
 							keyToChannelMap[input] = channel;
 							keyToValueMap[input] = key;
 						}
 					);
+				}
 			}
 		}
 
