@@ -19,13 +19,13 @@ import {
 
 const boilerplateState = createState(
 	'changeme',
-	(entity, { action, prevState, getPrevAction }) => {
+	({ action, prevState, getPrevAction }, entity) => {
 		action.play(); // should be the very last thing
 	},
-	(entity, { action, timeElapsed, input }) => {},
-	(entity, { action, getMixer }) => {}, // likely won't need
-	(entity, { action, getMixer }) => {}, // likely won't need
-	(entity, { action }) => {} // likely won't need
+	({ action, timeElapsed, input }, entity) => {},
+	({ action, getMixer }, entity) => {}, // likely won't need
+	({ action, getMixer }, entity) => {}, // likely won't need
+	({ action }, entity) => {} // likely won't need
 );
 
 function createState(
