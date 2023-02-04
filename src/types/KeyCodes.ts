@@ -120,3 +120,4 @@ const KeyCodes = {
 
 export type Keys = keyof typeof KeyCodes;
 export type Codes = typeof KeyCodes[Keys];
+export type KeysOrCodes = Keys | Codes;

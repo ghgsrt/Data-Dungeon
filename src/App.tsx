@@ -14,20 +14,20 @@ function App() {
 	const demoMenu: Record<string, JSX.Element> = {
 		'Example Comp.': <Example />,
 		'useInput Example': <InputExample />,
-		Model: <Model />,
+		// Model: <Model />,
 		QWOP: <GameWindow />,
 	};
 
 	return (
-		<div class="flex w-screen h-screen bg-gray-800 overflow-hidden">
-			<div class="flex flex-col w-min h-screen">
+		<div class="flex h-screen w-screen overflow-hidden bg-gray-800">
+			<div class="flex h-screen w-min flex-col">
 				<For each={Object.keys(demoMenu)}>
 					{(demoTitle) => (
 						<div
-							class={`flex-1 flex justify-center items-center p-1 
-									bg-gray-300 hover:bg-gray-400 
-									  select-none cursor-pointer text-center
-									  shadow-inner transition-colors
+							class={`flex flex-1 cursor-pointer select-none items-center
+									justify-center bg-gray-300
+									  p-1 text-center shadow-inner
+									  transition-colors hover:bg-gray-400
 									  active:bg-gray-400
 									  ${currentDemoTitle() === demoTitle ? 'bg-gray-400' : ''}`}
 							onClick={() => setCurrentDemoTitle(demoTitle)}
@@ -37,7 +37,7 @@ function App() {
 					)}
 				</For>
 			</div>
-			<div class="flex-1 h-screen">{demoMenu[currentDemoTitle()]}</div>
+			<div class="h-screen flex-1">{demoMenu[currentDemoTitle()]}</div>
 		</div>
 	);
 }

@@ -1,9 +1,8 @@
 import { createStore, produce } from 'solid-js/store';
 import useEventListener from './useEventListener';
-import { Keys, Codes } from '../types/KeyCodes';
+import { KeysOrCodes } from '../types/KeyCodes';
 
-type KeysOrCodes = Keys | Codes;
-type Channels<T = string> = Record<string, T[]>;
+export type Channels<T = string> = Record<string, T[]>;
 export type InputChannels<T extends KeysOrCodes> = Record<
 	string,
 	T[] | Channels<T>
@@ -16,6 +15,7 @@ export interface InputConfig<T extends KeysOrCodes> {
 	options: InputOptions;
 }
 
+//! SHOULD I TREAT NO CAPS AND CAPS THE EXACT SAME WHEN USE KEY????????
 function useInputs() {
 	const [outputChannels, setOutputChannels] = createStore<Channels>({});
 	const [keysPressed, setKeysPressed] = createStore<string[]>([]);
@@ -144,7 +144,7 @@ function useInputs() {
 		unsubList.push(useEventListener('keyup', handleKeyUp).unsubscribe);
 	};
 
-	return { outputChannels, listen };
+	return { outputChannels, listen, keysPressed };
 }
 
 export default useInputs;

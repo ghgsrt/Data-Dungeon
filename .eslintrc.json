@@ -7,7 +7,38 @@
 		"sourceType": "module"
 	},
 	"rules": {
-		"import/no-extraneous-dependencies": ["error", { "devDependencies": true }],
+		"@typescript-eslint/naming-convention": [
+			"error",
+			{
+				"selector": "variable",
+				"leadingUnderscore": "allowed"
+			}
+			// {
+			// 	"selector": "variable",
+			// 	"types": ["boolean"],
+			// 	"format": ["CamelCase"],
+			// 	"prefix": [
+			// 		"is",
+			// 		"are",
+			// 		"should",
+			// 		"has",
+			// 		"can",
+			// 		"did",
+			// 		"will",
+			// 		"was",
+			// 		"must",
+			// 		"have",
+			// 		"dont",
+			// 		"enable",
+			// 		"require",
+			// 		"force"
+			// 	]
+			// }
+		],
+		"import/no-extraneous-dependencies": [
+			"error",
+			{ "devDependencies": true }
+		],
 		"import/no-mutable-exports": 0,
 		"no-labels": 0,
 		"no-restricted-syntax": 0,
