@@ -19,7 +19,7 @@ function useFiniteStateMachine(
 
 	const setKeybindConfig = (config: KeybindConfig) => {
 		_setKeybindConfig(config);
-		if (input) useKeybinds(input, _keybindConfig());
+		if (input) useKeybinds(input, _keybindConfig(), { entity });
 	};
 	if (keybindConfig) setKeybindConfig(keybindConfig);
 
