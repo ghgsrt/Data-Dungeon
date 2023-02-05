@@ -125,9 +125,7 @@ function createDemo(container: HTMLDivElement) {
 
 	const RAF = () => {
 		requestAnimationFrame((t) => {
-			if (prevRAF() === null) {
-				setPrevRAF(t);
-			}
+			if (prevRAF() === null) setPrevRAF(t);
 
 			RAF();
 
