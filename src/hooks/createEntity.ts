@@ -13,12 +13,14 @@ import {
 	LoadingManager,
 } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
+import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import {
 	EOptionsConfig,
 	EntityConfig,
 	Entity,
 	LoadModelsConfig,
 	Animations,
+	ThreeTarget,
 } from '../types/Entity';
 import useFiniteStateMachine from './useFiniteStateMachine';
 
@@ -29,7 +31,7 @@ const defaultOptions: Record<string, EOCVals> = {
 	velocity: new Vector3(0, 0, 0),
 	acceleration: new Vector3(1, 0.25, 50.0),
 	decceleration: new Vector3(-0.0005, -0.0001, -5.0),
-};
+} satisfies EOptionsConfig;
 
 const reconcileOptions = (options?: Partial<EOptionsConfig>) => {
 	const _options: typeof defaultOptions = options ?? {};
@@ -69,9 +71,12 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		options.decceleration
 	);
 
-	const [target, setTarget] = createSignal(new Group());
+	const [target, setTarget] = createSignal<Group>(new Group());
 	const [manager, setManager] = createStore(new LoadingManager());
 	let mixer: AnimationMixer; // CANNOT BE REACTIVE!!!
+
+	// storage for any extraneous data you want tied to the entity
+	const [state, setState] = createStore({});
 
 	const getModelPath = (): string =>
 		`${modelsBasePath}/${modelExt()}/${modelDir()}/${modelName()}.${modelExt()}`;
@@ -109,7 +114,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		c.castShadow = shadow();
 	};
 
-	const onLoad = (anim: Group) => {
+	const onLoad = (anim: ThreeTarget) => {
 		const clip = anim.animations[0];
 		const action = mixer.clipAction(clip);
 
@@ -127,18 +132,14 @@ function createEntity(entityConfig: EntityConfig): Entity {
 	};
 
 	// "proxy" fn necessary for tracking reactivity when branching into onLoad
-	const passAnimToLoad = (a: Group) => onLoad(a);
+	const passAnimToLoad = (a: ThreeTarget): void => onLoad(a);
 
-	const loadAnimsFBX = (fbx: Group) => {
-		fbx.scale.setScalar(scale());
-		fbx.traverse(applyShadows);
+	const loadAnims = (_target: Group): void => {
+		_target.scale.setScalar(scale());
+		_target.traverse(applyShadows);
 
-		setTarget(fbx);
-		setScene(
-			produce((_scene) => {
-				_scene.add(target());
-			})
-		);
+		setTarget(_target);
+		setScene(produce((_scene) => _scene.add(target())));
 
 		mixer = new AnimationMixer(target());
 
@@ -154,14 +155,21 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		}
 	};
 
-	const loadModelGLTF = () => {};
-
-	const loadModelFBX = () => {
-		const loader = new FBXLoader();
-		loader.load(getModelPath(), loadAnimsFBX);
+	const extractTarget = (model: ThreeTarget, ext: string): Group => {
+		switch (ext) {
+			case 'gltf':
+				return (model as GLTF).scene;
+			default:
+				return model as Group;
+		}
 	};
 
-	const loadModelAndAnims = (loadConfig: LoadModelsConfig) => {
+	const loadModel = (ext: string): void =>
+		eval(`new ${ext}Loader()`).load(getModelPath(), (model: ThreeTarget) =>
+			loadAnims(extractTarget(model, ext))
+		);
+
+	const loadModelAndAnims = (loadConfig: LoadModelsConfig): void => {
 		setModelDir(loadConfig.parentDir);
 		setModelName(loadConfig.modelName);
 		setModelExt(loadConfig.modelExt);
@@ -173,11 +181,11 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		setAnimsExt(loadConfig.animsExt ?? loadConfig.modelExt);
 
 		switch (modelExt()) {
-			case 'fbx':
-				loadModelFBX();
+			case 'glb':
+				loadModel('GLTF');
 				break;
 			default:
-				loadModelGLTF();
+				loadModel(modelExt().toUpperCase());
 		}
 	};
 
@@ -185,10 +193,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (!target) return;
 
-		stateMachine()?.update(
-			timeInSeconds,
-			entityConfig.inputs,
-		);
+		stateMachine()?.update(timeInSeconds, entityConfig.inputs);
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (mixer) mixer.update(timeInSeconds);
 
@@ -237,6 +242,8 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		target,
 		manager,
 
+		state,
+
 		setScene,
 		setCamera,
 
@@ -259,6 +266,8 @@ function createEntity(entityConfig: EntityConfig): Entity {
 
 		setTarget,
 		setManager,
+
+		setState,
 
 		readyForStateChange,
 		toDefaultState,
