@@ -1,27 +1,32 @@
-import { createEffect, createSignal } from 'solid-js';
+import { createEffect, createSignal, onCleanup } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { Entity } from '../types/Entity';
-import {
-	StateBuilderFn,
-	StateBuilderMap,
-	FiniteStateMachine,
-	State,
-} from '../types/State';
-import { Channels } from './useInputs';
+import { StateBuilderMap, FiniteStateMachine, State } from '../types/State';
+import { Output } from './useInputs';
+import useKeybinds, { KeybindConfig } from './useKeybinds';
 
 function useFiniteStateMachine(
 	entity: Entity,
-	defaultStates?: StateBuilderMap
+	defaultStates?: StateBuilderMap,
+	input?: Output,
+	keybindConfig?: KeybindConfig
 ): FiniteStateMachine {
 	const [states, setStates] = createStore<StateBuilderMap>(
 		defaultStates ?? {}
 	);
 	const [currentState, _setCurrentState] = createSignal<State>();
+	const [_keybindConfig, _setKeybindConfig] = createSignal<KeybindConfig>();
 
-	const addState = (name: string, builderFn: StateBuilderFn) => {
+	const setKeybindConfig = (config: KeybindConfig) => {
+		_setKeybindConfig(config);
+		if (input) useKeybinds(input, _keybindConfig());
+	};
+	if (keybindConfig) setKeybindConfig(keybindConfig);
+
+	const addState: FiniteStateMachine['addState'] = (name, builderFn) => {
 		setStates((prev) => ({ ...prev, [name]: builderFn }));
 	};
-	const addStates = (_states: StateBuilderMap) => {
+	const addStates: FiniteStateMachine['addStates'] = (_states) => {
 		setStates((prev) => ({ ...prev, ..._states }));
 	};
 
@@ -30,7 +35,7 @@ function useFiniteStateMachine(
 		console.log(currentState()?.name);
 	});
 
-	const changeState = (name: string) => {
+	const changeState: FiniteStateMachine['changeState'] = (name) => {
 		const prevState = currentState();
 
 		if (prevState) {
@@ -45,11 +50,22 @@ function useFiniteStateMachine(
 		state.enter(prevState!);
 	};
 
-	const update = (timeElapsed: number, input: Channels) => {
+	const update: FiniteStateMachine['update'] = (timeElapsed, input) => {
 		if (currentState()) currentState()!.update(timeElapsed, input);
 	};
 
-	return { states, currentState, addState, addStates, changeState, update };
+	onCleanup(() => currentState()?.exit());
+
+	return {
+		states,
+		currentState,
+		keybindConfig: _keybindConfig,
+		setKeybindConfig,
+		addState,
+		addStates,
+		changeState,
+		update,
+	};
 }
 
 export default useFiniteStateMachine;

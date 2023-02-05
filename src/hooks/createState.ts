@@ -1,41 +1,42 @@
 import { modifyMutable, produce } from 'solid-js/store';
 import { Entity } from '../types/Entity';
 import {
-	StateFn,
-	StateBuilderFn,
-	StateEnterFn,
-	StateExitFn,
-	StateUpdateFn,
-	StateEnterProps,
-	StateExitProps,
-	StateUpdateProps,
-	StateProps,
-	StateCleanupFn,
-	StateFinishedFn,
 	State,
+	StateFn,
+	StateEnterFn,
+	StateUpdateFn,
+	StateFinishedFn,
+	StateCleanupFn,
+	StateExitFn,
+	StateProps,
+	StateEnterProps,
+	StateUpdateProps,
 	StateFinishedProps,
 	StateCleanupProps,
+	StateExitProps,
+	StateBuilderFn,
 } from '../types/State';
 
-const boilerplateState = createState(
-	'changeme',
-	({ action, prevState, getPrevAction }, entity) => {
-		action.play(); // should be the very last thing
-	},
-	({ action, timeElapsed, input }, entity) => {},
-	({ action, getMixer }, entity) => {}, // likely won't need
-	({ action, getMixer }, entity) => {}, // likely won't need
-	({ action }, entity) => {} // likely won't need
-);
+const boilerplateDefaultState = createState('nameOfAnimationInFSM');
 
-function createState(
-	name: string,
-	enter: StateEnterFn,
-	update: StateUpdateFn,
-	finished?: StateFinishedFn,
-	cleanup?: StateCleanupFn,
-	exit?: StateExitFn
-): StateBuilderFn {
+const boilerplateCustomState = createState('nameOfAnimationInFSM', {
+	enter: ({ action, prevState, getPrevAction, setTimeFromRatio }, entity) =>
+		action.play(), // action.play() should be the very last thing called
+	update: ({ action, timeElapsed, input }, entity) => {}, // likely won't need
+	finished: ({ action, getMixer }, entity) => {}, // likely won't need
+	cleanup: ({ action, getMixer }, entity) => {}, // likely won't need
+	exit: ({ action }, entity) => {}, // likely won't need
+});
+
+export interface CreateStateFns {
+	enter?: StateEnterFn;
+	update?: StateUpdateFn;
+	finished?: StateFinishedFn;
+	cleanup?: StateCleanupFn;
+	exit?: StateExitFn;
+}
+
+function createState(name: string, stateFns?: CreateStateFns): StateBuilderFn {
 	const stateFnWrapper = <P extends StateProps>(
 		callback: StateFn,
 		entity: Entity,
@@ -52,7 +53,7 @@ function createState(
 				//! Don't know how to make TS recognize the following
 				//! won't cause an error lol
 				if ('prevState' in _props) {
-					// default assignments
+					//? default assignments
 					_props.action.enabled = true;
 					_props.action.time = 0.0;
 					_props.action.setEffectiveTimeScale(1.0);
@@ -60,6 +61,16 @@ function createState(
 
 					_props.getPrevAction = () =>
 						animations[_props.prevState?.name]?.action;
+
+					_props.setTimeFromRatio = (name?: string) => {
+						if (name && _props.prevState?.name !== name) return;
+
+						const prevAction = _props.getPrevAction();
+						const ratio =
+							_props.action.getClip().duration /
+							prevAction.getClip().duration;
+						_props.action.time = prevAction.time * ratio;
+					};
 
 					let prevAction;
 					if ((prevAction = _props.getPrevAction()))
@@ -73,52 +84,70 @@ function createState(
 
 	return (entity) => {
 		const getMixer = () => entity.animations[name].action.getMixer();
+		const changeState = (name: string) =>
+			entity.stateMachine()?.changeState(name);
 
-		const _enter: State['enter'] = (prevState) => {
-			if (finished) {
-				getMixer().addEventListener('finished', _finished);
+		const enter: State['enter'] = (prevState) => {
+			if (stateFns?.finished) {
+				getMixer().addEventListener('finished', finished);
 			}
 
-			return stateFnWrapper<StateEnterProps>(enter, entity, {
+			const defaultEnter: StateEnterFn = ({
 				prevState,
-			});
+				action,
+				setTimeFromRatio,
+			}) => {
+				// if (prevState) setTimeFromRatio();
+				action.play();
+			};
+
+			stateFnWrapper<StateEnterProps>(
+				stateFns?.enter ?? defaultEnter,
+				entity,
+				{
+					prevState,
+				}
+			);
 		};
 
-		const _update: State['update'] = (timeElapsed, input) =>
-			stateFnWrapper<StateUpdateProps>(update, entity, {
-				timeElapsed,
-				input,
-				changeState: (name: string) => {
-					entity.stateMachine()?.changeState(name);
-				},
-			});
+		const update: State['update'] = (timeElapsed, input) => {
+			if (stateFns?.update) {
+				stateFnWrapper<StateUpdateProps>(stateFns.update, entity, {
+					timeElapsed,
+					input,
+					changeState,
+				});
+			}
+		};
 
-		const _finished: State['finished'] = () =>
-			finished
-				? () =>
-						stateFnWrapper<StateFinishedProps>(finished, entity, {
-							getMixer,
-						})
-				: () => {}; // no op
+		const finished: State['finished'] = () => {
+			if (stateFns?.finished)
+				stateFnWrapper<StateFinishedProps>(stateFns.finished, entity, {
+					getMixer,
+				});
+		};
 
-		const _cleanup: State['cleanup'] = cleanup
-			? () =>
-					stateFnWrapper<StateCleanupProps>(cleanup, entity, {
-						getMixer,
-					})
-			: () => getMixer().removeEventListener('finished', _finished);
+		const cleanup: State['cleanup'] = () => {
+			if (stateFns?.cleanup)
+				stateFnWrapper<StateCleanupProps>(stateFns.cleanup, entity, {
+					getMixer,
+				});
+			getMixer().removeEventListener('finished', finished);
+		};
 
-		const _exit: State['exit'] = exit
-			? () => stateFnWrapper<StateExitProps>(exit, entity)
-			: _cleanup;
+		const exit: State['exit'] = () => {
+			if (stateFns?.exit)
+				stateFnWrapper<StateExitProps>(stateFns.exit, entity);
+			cleanup;
+		};
 
 		return {
 			name,
-			enter: _enter,
-			update: _update,
-			finished: _finished,
-			cleanup: _cleanup,
-			exit: _exit,
+			enter,
+			update,
+			finished,
+			cleanup,
+			exit,
 		};
 	};
 }
