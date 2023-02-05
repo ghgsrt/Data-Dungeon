@@ -1,11 +1,7 @@
 function SlideToggle(props: any) {
-	
-    return (
+	return (
 		<label class="switch">
-			<input
-				type="checkbox"
-				{...props}
-			/>
+			<input type="checkbox" {...props} />
 			<span class="slider round" />
 		</label>
 	);

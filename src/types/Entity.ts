@@ -9,7 +9,7 @@ import {
 	AnimationClip,
 	AnimationAction,
 } from 'three';
-import { Channels } from '../hooks/useInputs';
+import useInputs, { Channels, Output } from '../hooks/useInputs';
 import { FiniteStateMachine } from './State';
 
 export type Animations = Record<
@@ -31,7 +31,7 @@ export interface EOptionsConfig {
 export interface EntityConfig {
 	scene: Scene;
 	camera: Camera;
-	inputs: Channels;
+	inputs: Output;
 	options?: Partial<EOptionsConfig>;
 }
 
@@ -44,6 +44,12 @@ export interface LoadModelsConfig {
 	animNames?: string[];
 	animsExt?: ThreeExtensions;
 }
+
+export type CreateCustomEntity = (
+	scene: Scene,
+	camera: Camera,
+	inputs: ReturnType<typeof useInputs>
+) => Entity;
 
 export interface Entity {
 	scene: Scene;
@@ -93,6 +99,8 @@ export interface Entity {
 	setTarget: Setter<Group>;
 	setManager: SetStoreFunction<LoadingManager>;
 
+	readyForStateChange: () => boolean;
+	toDefaultState: () => void;
 	loadModelAndAnims: (loadConfig: LoadModelsConfig) => void;
 	update: (timeInSeconds: number) => void;
 }

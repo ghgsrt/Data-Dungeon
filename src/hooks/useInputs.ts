@@ -15,44 +15,52 @@ export interface InputConfig<T extends KeysOrCodes> {
 	options: InputOptions;
 }
 
+export interface Output {
+	channels: Channels;
+	pressed: string[];
+}
+
 //! SHOULD I TREAT NO CAPS AND CAPS THE EXACT SAME WHEN USE KEY????????
 function useInputs() {
-	const [outputChannels, setOutputChannels] = createStore<Channels>({});
-	const [keysPressed, setKeysPressed] = createStore<string[]>([]);
+	const [output, setOutput] = createStore<Output>({
+		channels: {},
+		pressed: [],
+	});
 	const unsubList: (() => void)[] = [];
 
 	const addChannel = (channel: string) => {
-		setOutputChannels((prev) => ({ ...prev, [channel]: [] }));
+		setOutput('channels', (channels) => ({ ...channels, [channel]: [] }));
 	};
 	const pushToChannel = (channel: string, item: string) => {
-		setOutputChannels(
-			produce((channels) => {
-				channels[channel].unshift(item);
-			})
-		);
+		setOutput('channels', channel, (channel) => [item, ...channel]);
 	};
 	const removeFromChannel = (channel: string, item: string) => {
-		setOutputChannels(
-			produce((channels) => {
-				const idxToRemove = channels[channel].lastIndexOf(item);
-				if (idxToRemove > -1) channels[channel].splice(idxToRemove, 1);
+		setOutput(
+			'channels',
+			channel,
+			produce((channel) => {
+				const idxToRemove = channel.lastIndexOf(item);
+				if (idxToRemove > -1) channel.splice(idxToRemove, 1);
 			})
 		);
+
 	};
 	const clearOutputChannels = () => {
-		setOutputChannels({});
+		setOutput('channels', {});
 		unsubList.forEach((unsub) => unsub());
 	};
 
 	const pressKey = (key: string) => {
-		setKeysPressed(
+		setOutput(
+			'pressed',
 			produce((keys) => {
-				keys.push(key);
+				keys.unshift(key);
 			})
 		);
 	};
 	const releaseKey = (key: string) => {
-		setKeysPressed(
+		setOutput(
+			'pressed',
 			produce((keys) => {
 				const idxToRemove = keys.indexOf(key);
 				if (idxToRemove > -1) keys.splice(idxToRemove, 1);
@@ -123,7 +131,7 @@ function useInputs() {
 		const handleKeyDown = (e: Event) => {
 			const { key, channels, values, shouldReturn } = determineValue(e);
 
-			if (shouldReturn || keysPressed.includes(key)) return;
+			if (shouldReturn || output.pressed.includes(key)) return;
 			e.preventDefault();
 
 			mutOutChannels(pushToChannel, channels, values);
@@ -133,7 +141,7 @@ function useInputs() {
 		const handleKeyUp = (e: Event) => {
 			const { key, channels, values, shouldReturn } = determineValue(e);
 
-			if (shouldReturn || !keysPressed.includes(key)) return;
+			if (shouldReturn || !output.pressed.includes(key)) return;
 			e.preventDefault();
 
 			mutOutChannels(removeFromChannel, channels, values);
@@ -144,7 +152,7 @@ function useInputs() {
 		unsubList.push(useEventListener('keyup', handleKeyUp).unsubscribe);
 	};
 
-	return { outputChannels, listen, keysPressed };
+	return { output, listen };
 }
 
 export default useInputs;

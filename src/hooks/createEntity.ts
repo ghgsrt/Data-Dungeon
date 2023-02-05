@@ -73,7 +73,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 	const [manager, setManager] = createStore(new LoadingManager());
 	let mixer: AnimationMixer; // CANNOT BE REACTIVE!!!
 
-	const getModelPath = () =>
+	const getModelPath = (): string =>
 		`${modelsBasePath}/${modelExt()}/${modelDir()}/${modelName()}.${modelExt()}`;
 
 	const reconcileAnimPath = (animName: string): string => {
@@ -94,8 +94,15 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		return `${animsBasePath}/${ext}/${dir}/${name}.${ext}`;
 	};
 
+	const sanitizeAnimName = (name: string): string =>
+		name.split('.')[0].split('/')[0];
+
+	const readyForStateChange = () => {
+		return Object.keys(animations).length > 0;
+	};
+
 	const toDefaultState = () => {
-		stateMachine()?.changeState(defaultAnim());
+		stateMachine()?.changeState(sanitizeAnimName(defaultAnim()));
 	};
 
 	const applyShadows = (c: Object3D) => {
@@ -109,7 +116,9 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		modifyMutable(
 			animations,
 			produce((_animations) => {
-				_animations[animNames[Object.keys(animations).length]] = {
+				_animations[
+					sanitizeAnimName(animNames[Object.keys(animations).length])
+				] = {
 					clip,
 					action,
 				};
@@ -176,7 +185,10 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (!target) return;
 
-		stateMachine()?.update(timeInSeconds, entityConfig.inputs);
+		stateMachine()?.update(
+			timeInSeconds,
+			entityConfig.inputs,
+		);
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (mixer) mixer.update(timeInSeconds);
 
@@ -248,6 +260,8 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		setTarget,
 		setManager,
 
+		readyForStateChange,
+		toDefaultState,
 		loadModelAndAnims,
 		update,
 	};

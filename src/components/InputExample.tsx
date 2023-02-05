@@ -34,7 +34,7 @@ const inputConfigTwo: InputConfig<Codes> = {
 
 function InputExample() {
 	const [showKeyConfig, setShowKeyConfig] = createSignal(false);
-	const { outputChannels, listen } = useInputs();
+	const { output, listen } = useInputs();
 
 	createEffect(() => {
 		if (showKeyConfig()) listen(inputConfigOne);
@@ -52,11 +52,10 @@ function InputExample() {
 					setShowKeyConfig((e.target as HTMLInputElement).checked)
 				}
 			/>
-			<For
-			each={Object.keys(outputChannels)}>
+			<For each={Object.keys(output.channels)}>
 				{(channel) => (
 					<p class="mt-7 text-2xl text-gray-200">
-						{channel}: '{JSON.stringify(outputChannels[channel])}'
+						{channel}: '{JSON.stringify(output.channels[channel])}'
 					</p>
 				)}
 			</For>
