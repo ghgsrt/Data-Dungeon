@@ -9,7 +9,7 @@ export interface StateKeybindFnProps {
 }
 export type PostFireBase = (...args: any[]) => void;
 export type PostFire<F extends PostFireBase> = {
-	_post: (...props: ReturnType<F>[]) => void;
+	_post: (result: ReturnType<F>[], state: Record<string, any>) => void;
 };
 export type StateKeybindFn = (props: StateKeybindFnProps) => string | undefined;
 export type Keybinds<F extends PostFireBase> = Record<keyof Channels, F> &
@@ -59,15 +59,20 @@ export const validateKeybindConfig = <
 
 function useKeybinds<F extends PostFireBase>(
 	input: Output,
-	_keybindConfig?: KeybindConfig<F>
+	_keybindConfig?: KeybindConfig<F>,
+	_fnProps?: Record<string, any>
 ) {
 	const [keybindConfig, setKeybindConfig] = createSignal(_keybindConfig);
 	const [keybinds, setKeybinds] = createStore<Keybinds<F>>(
 		_keybindConfig?.channels
 	);
+	const [fnProps, setFnProps] = createStore(_fnProps);
 
-	const firePost = (props?: any) => {
-		(keybindConfig()?.channels!._post as (props: any) => void)(props);
+	const firePost = (result?: any) => {
+		(keybindConfig()?.channels!._post as PostFire<F>['_post'])(
+			result,
+			fnProps
+		);
 	};
 
 	createEffect(() => {
@@ -84,6 +89,7 @@ function useKeybinds<F extends PostFireBase>(
 				if (input.channels[channel][0] === input.pressed[pressedIdx]) {
 					const result = keybinds[channel]({
 						input,
+						...fnProps,
 					});
 
 					firePost(result);
@@ -94,7 +100,14 @@ function useKeybinds<F extends PostFireBase>(
 		if (input.pressed.length === 0) firePost();
 	});
 
-	return { keybinds, keybindConfig, setKeybinds, setKeybindConfig };
+	return {
+		keybinds,
+		keybindConfig,
+		fnProps,
+		setKeybinds,
+		setKeybindConfig,
+		setFnProps,
+	};
 }
 
 export default useKeybinds;
