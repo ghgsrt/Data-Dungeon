@@ -9,7 +9,7 @@ export interface StateKeybindFnProps {
 }
 export type PostFireBase = (...args: any[]) => void;
 export type PostFire<F extends PostFireBase> = {
-	_post: (result: ReturnType<F>[], state: Record<string, any>) => void;
+	_post: (result: ReturnType<F>, state: Record<string, any>) => void;
 };
 export type StateKeybindFn = (props: StateKeybindFnProps) => string | undefined;
 export type Keybinds<F extends PostFireBase> = Record<keyof Channels, F> &

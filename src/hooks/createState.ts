@@ -92,12 +92,7 @@ function createState(name: string, stateFns?: CreateStateFns): StateBuilderFn {
 				getMixer().addEventListener('finished', finished);
 			}
 
-			const defaultEnter: StateEnterFn = ({
-				prevState,
-				action,
-				setTimeFromRatio,
-			}) => {
-				// if (prevState) setTimeFromRatio();
+			const defaultEnter: StateEnterFn = ({ action }) => {
 				action.play();
 			};
 

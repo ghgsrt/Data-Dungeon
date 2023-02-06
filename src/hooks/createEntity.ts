@@ -22,6 +22,7 @@ import {
 	Animations,
 	ThreeTarget,
 } from '../types/Entity';
+import { FiniteStateMachine } from '../types/State';
 import useFiniteStateMachine from './useFiniteStateMachine';
 
 type EOCVals = EOptionsConfig[keyof EOptionsConfig];
@@ -59,8 +60,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 
 	const [defaultAnim, setDefaultAnim] = createSignal('');
 	const animations = createMutable<Animations>({});
-	const [stateMachine, setStateMachine] =
-		createSignal<ReturnType<typeof useFiniteStateMachine>>();
+	const [stateMachine, setStateMachine] = createSignal<FiniteStateMachine>();
 
 	const options = reconcileOptions(entityConfig.options);
 	const [scale, setScale] = createSignal(options.scale);
@@ -191,7 +191,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 
 	const update = (timeInSeconds: number) => {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		if (!target) return;
+		if (!target()) return;
 
 		stateMachine()?.update(timeInSeconds, entityConfig.inputs);
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
