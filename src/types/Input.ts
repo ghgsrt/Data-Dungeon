@@ -1,3 +1,4 @@
+import { Setter } from 'solid-js';
 import { SetStoreFunction } from 'solid-js/store';
 import { KeysOrCodes } from './KeyCodes';
 
@@ -28,7 +29,7 @@ export interface UseInputs<
 		inputConfig: InputConfig<T>,
 		keybindConfig?: KeybindConfig<K, C>
 	) => void;
-	setKeybindConfig: SetStoreFunction<Partial<KeybindConfig<K, C>>>;
+	setKeybindConfig: Setter<Partial<KeybindConfig<K, C>>>;
 }
 
 export type KeybindFn = (pressed: boolean) => void;

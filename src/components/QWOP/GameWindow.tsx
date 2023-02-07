@@ -69,16 +69,12 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 			jump: () => 'jump',
 			dance: () => 'dance',
 			mods: () => undefined,
-			_post: (result) => {
-				console.log(result);
+			_post: (result) =>
 				result
 					? player.stateMachine()?.changeState(result)
-					: player.toDefaultState();
-			},
+					: player.toDefaultState(),
 		}
 	);
-
-	console.log(JSON.stringify(keybindConfig));
 
 	inputs.listen(inputConfig, keybindConfig);
 
