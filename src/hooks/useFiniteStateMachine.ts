@@ -2,26 +2,15 @@ import { createEffect, createSignal, onCleanup } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { Entity } from '../types/Entity';
 import { StateBuilderMap, FiniteStateMachine, State } from '../types/State';
-import { Output } from './useInputs';
-import useKeybinds, { KeybindConfig } from './useKeybinds';
 
 function useFiniteStateMachine(
 	entity: Entity,
-	defaultStates?: StateBuilderMap,
-	input?: Output,
-	keybindConfig?: KeybindConfig
+	defaultStates?: StateBuilderMap
 ): FiniteStateMachine {
 	const [states, setStates] = createStore<StateBuilderMap>(
 		defaultStates ?? {}
 	);
 	const [currentState, _setCurrentState] = createSignal<State>();
-	const [_keybindConfig, _setKeybindConfig] = createSignal<KeybindConfig>();
-
-	const setKeybindConfig = (config: KeybindConfig) => {
-		_setKeybindConfig(config);
-		if (input) useKeybinds(input, _keybindConfig(), { entity });
-	};
-	if (keybindConfig) setKeybindConfig(keybindConfig);
 
 	const addState: FiniteStateMachine['addState'] = (name, builderFn) => {
 		setStates((prev) => ({ ...prev, [name]: builderFn }));
@@ -36,6 +25,8 @@ function useFiniteStateMachine(
 	});
 
 	const changeState: FiniteStateMachine['changeState'] = (name) => {
+		if (!entity.readyForStateChange()) return;
+
 		const prevState = currentState();
 
 		if (prevState) {
@@ -50,8 +41,10 @@ function useFiniteStateMachine(
 		state.enter(prevState!);
 	};
 
-	const update: FiniteStateMachine['update'] = (timeElapsed, input) => {
-		if (currentState()) currentState()!.update(timeElapsed, input);
+	const update: FiniteStateMachine['update'] = (timeElapsed) => {
+		if (!currentState()) return;
+
+		currentState()!.update(timeElapsed);
 	};
 
 	onCleanup(() => currentState()?.exit());
@@ -59,8 +52,6 @@ function useFiniteStateMachine(
 	return {
 		states,
 		currentState,
-		keybindConfig: _keybindConfig,
-		setKeybindConfig,
 		addState,
 		addStates,
 		changeState,

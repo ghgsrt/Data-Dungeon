@@ -11,7 +11,7 @@ import {
 } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import useInputs, { Channels, Output } from '../hooks/useInputs';
+import { UseInputs } from '../hooks/useInputs';
 import { FiniteStateMachine } from './State';
 
 export type Animations = Record<
@@ -33,12 +33,12 @@ export interface EOptionsConfig {
 export interface EntityConfig {
 	scene: Scene;
 	camera: Camera;
-	inputs: Output;
+	state?: Record<string, any>;
 	options?: Partial<EOptionsConfig>;
 }
 
-type ThreeExtension = 'fbx' | 'glb';
-export type ThreeLoader = typeof FBXLoader | typeof GLTFLoader;
+type ThreeExtension = 'fbx' | 'glb' | 'gltf';
+export type ThreeLoader = FBXLoader | GLTFLoader;
 export type ThreeTarget = Group | GLTF;
 export interface LoadModelsConfig {
 	parentDir: string;
@@ -52,7 +52,7 @@ export interface LoadModelsConfig {
 export type CreateCustomEntity = (
 	scene: Scene,
 	camera: Camera,
-	inputs: ReturnType<typeof useInputs>
+	inputs: UseInputs
 ) => Entity;
 
 export interface Entity {
@@ -62,6 +62,7 @@ export interface Entity {
 	modelDir: Accessor<string>;
 	modelName: Accessor<string>;
 	modelExt: Accessor<string>;
+	modelReady: Accessor<boolean>;
 
 	animsDir: Accessor<string>;
 	animNames: string[];
@@ -77,7 +78,7 @@ export interface Entity {
 	acceleration: Accessor<Vector3>;
 	decceleration: Accessor<Vector3>;
 
-	target: Accessor<Group>;
+	target: Accessor<Group | undefined>;
 	manager: LoadingManager;
 
 	state: Record<string, any>;
@@ -107,6 +108,7 @@ export interface Entity {
 
 	setState: SetStoreFunction<Record<string, any>>;
 
+	onUpdate: (fn: Entity['update']) => void;
 	readyForStateChange: () => boolean;
 	toDefaultState: () => void;
 	loadModelAndAnims: (loadConfig: LoadModelsConfig) => void;

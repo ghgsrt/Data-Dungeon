@@ -3,11 +3,6 @@ import { Entity } from '../types/Entity';
 import {
 	State,
 	StateFn,
-	StateEnterFn,
-	StateUpdateFn,
-	StateFinishedFn,
-	StateCleanupFn,
-	StateExitFn,
 	StateProps,
 	StateEnterProps,
 	StateUpdateProps,
@@ -20,25 +15,25 @@ import {
 const boilerplateDefaultState = createState('nameOfAnimationInFSM');
 
 const boilerplateCustomState = createState('nameOfAnimationInFSM', {
-	enter: ({ action, prevState, getPrevAction, setTimeFromRatio }, entity) =>
+	enter: ({ action, prevState, getPrevAction, setTimeFromRatio }) =>
 		action.play(), // action.play() should be the very last thing called
-	update: ({ action, timeElapsed, input }, entity) => {}, // likely won't need
-	finished: ({ action, getMixer }, entity) => {}, // likely won't need
-	cleanup: ({ action, getMixer }, entity) => {}, // likely won't need
-	exit: ({ action }, entity) => {}, // likely won't need
+	update: ({ action, timeElapsed }) => {}, // likely won't need
+	finished: ({ action, getMixer }) => {}, // likely won't need
+	cleanup: ({ action, getMixer }) => {}, // likely won't need
+	exit: ({ action }) => {}, // likely won't need
 });
 
 export interface CreateStateFns {
-	enter?: StateEnterFn;
-	update?: StateUpdateFn;
-	finished?: StateFinishedFn;
-	cleanup?: StateCleanupFn;
-	exit?: StateExitFn;
+	enter?: StateFn<StateEnterProps>;
+	update?: StateFn<StateUpdateProps>;
+	finished?: StateFn<StateFinishedProps>;
+	cleanup?: StateFn<StateCleanupProps>;
+	exit?: StateFn<StateExitProps>;
 }
 
 function createState(name: string, stateFns?: CreateStateFns): StateBuilderFn {
 	const stateFnWrapper = <P extends StateProps>(
-		callback: StateFn,
+		callback: StateFn<P>,
 		entity: Entity,
 		props?: Partial<P>
 	) => {
@@ -92,7 +87,9 @@ function createState(name: string, stateFns?: CreateStateFns): StateBuilderFn {
 				getMixer().addEventListener('finished', finished);
 			}
 
-			const defaultEnter: StateEnterFn = ({ action }) => {
+			entity.setState('actions', name, true);
+
+			const defaultEnter: StateFn<StateEnterProps> = ({ action }) => {
 				action.play();
 			};
 
@@ -105,14 +102,20 @@ function createState(name: string, stateFns?: CreateStateFns): StateBuilderFn {
 			);
 		};
 
-		const update: State['update'] = (timeElapsed, input) => {
+		const update: State['update'] = (timeElapsed) => {
 			if (stateFns?.update) {
 				stateFnWrapper<StateUpdateProps>(stateFns.update, entity, {
 					timeElapsed,
-					input,
 					changeState,
 				});
 			}
+
+			entity.setState(
+				'timers',
+				name,
+				entity.animations[name].action.time /
+					entity.animations[name].action.getClip().duration
+			);
 		};
 
 		const finished: State['finished'] = () => {
@@ -127,6 +130,9 @@ function createState(name: string, stateFns?: CreateStateFns): StateBuilderFn {
 				stateFnWrapper<StateCleanupProps>(stateFns.cleanup, entity, {
 					getMixer,
 				});
+
+			entity.setState('timers', name, 0);
+
 			getMixer().removeEventListener('finished', finished);
 		};
 
@@ -134,6 +140,8 @@ function createState(name: string, stateFns?: CreateStateFns): StateBuilderFn {
 			if (stateFns?.exit)
 				stateFnWrapper<StateExitProps>(stateFns.exit, entity);
 			cleanup;
+
+			entity.setState('actions', name, false);
 		};
 
 		return {

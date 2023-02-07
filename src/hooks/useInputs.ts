@@ -1,37 +1,87 @@
 import { createStore, produce } from 'solid-js/store';
 import useEventListener from './useEventListener';
 import { KeysOrCodes } from '../types/KeyCodes';
+import { createEffect } from 'solid-js';
+import {
+	KeybindConfig,
+	UseInputs,
+	Output,
+	PostFire,
+	InputConfig,
+	Channels,
+	ChannelKeybindFn,
+	Indexer,
+	KBValidator,
+	KeybindFn,
+	KeybindOptions,
+	ValidConfig,
+} from '../types/Input';
 
-export type Channels<T = string> = Record<string, T[]>;
-export type InputChannels<T extends KeysOrCodes> = Record<
-	string,
-	T[] | Channels<T>
->;
-export interface InputOptions {
-	use: 'key' | 'code';
-}
-export interface InputConfig<T extends KeysOrCodes> {
-	channels: InputChannels<T>;
-	options: InputOptions;
-}
+export const validateKeybindConfig = <
+	KT extends Indexer,
+	CT,
+	KF = KeybindFn,
+	CF extends (...args: any) => any = ChannelKeybindFn
+	// FLAGS extends string = string
+>(
+	keys: KBValidator<KT, KF>,
+	// channels: KBCValidator<FLAGS, keyof CT, CF>,
+	channels: ValidConfig<keyof CT, CF> & PostFire<CF>,
+	options?: KeybindOptions
+) => {
+	console.log(JSON.stringify(keys));
+	console.log(JSON.stringify(channels));
+	console.log(JSON.stringify(options));
 
-export interface Output {
-	channels: Channels;
-	pressed: string[];
-}
+	return {
+		keys,
+		channels,
+		options,
+	};
+};
 
 //! SHOULD I TREAT NO CAPS AND CAPS THE EXACT SAME WHEN USE KEY????????
-function useInputs() {
+function useInputs<
+	K extends (...args: any) => any,
+	C extends (...args: any) => any
+>(keybindConfig?: KeybindConfig<K, C>): UseInputs<K, C> {
+	const [_keybindConfig, setKeybindConfig] =
+		createStore<Partial<KeybindConfig<K, C>>>(keybindConfig);
+
 	const [output, setOutput] = createStore<Output>({
 		channels: {},
 		pressed: [],
 	});
 	const unsubList: (() => void)[] = [];
 
+	const firePost = (result?: any) => {
+		console.log(JSON.stringify(_keybindConfig));
+		(_keybindConfig?.channels?._post as PostFire<any>['_post'])?.(result);
+	};
+	createEffect(() => {
+		if (output.pressed.length === 0) firePost();
+	});
+
+	const callKeybind = (key: string, pressed: boolean) => {
+		if (_keybindConfig) _keybindConfig.keys?.[key]?.(pressed);
+	};
+	const callChannelKeybind = (channel: string) => {
+		if (_keybindConfig) {
+			const res = _keybindConfig.keys?.[channel]?.({
+				pressed: true,
+				output,
+			});
+			if (channel !== 'mods' || _keybindConfig.options?.useModsChannel)
+				firePost(res);
+		}
+	};
+
 	const addChannel = (channel: string) => {
 		setOutput('channels', (channels) => ({ ...channels, [channel]: [] }));
 	};
 	const pushToChannel = (channel: string, item: string) => {
+		callChannelKeybind(channel);
+
 		setOutput('channels', channel, (channel) => [item, ...channel]);
 	};
 	const removeFromChannel = (channel: string, item: string) => {
@@ -44,6 +94,7 @@ function useInputs() {
 			})
 		);
 
+		callChannelKeybind(output.channels[channel][0]);
 	};
 	const clearOutputChannels = () => {
 		setOutput('channels', {});
@@ -51,6 +102,8 @@ function useInputs() {
 	};
 
 	const pressKey = (key: string) => {
+		callKeybind(key, true);
+
 		setOutput(
 			'pressed',
 			produce((keys) => {
@@ -66,9 +119,19 @@ function useInputs() {
 				if (idxToRemove > -1) keys.splice(idxToRemove, 1);
 			})
 		);
+
+		callKeybind(key, false);
 	};
 
-	const listen = <T extends KeysOrCodes>(inputConfig: InputConfig<T>) => {
+	const listen = <T extends KeysOrCodes>(
+		inputConfig: InputConfig<T>,
+		keybindConfig?: KeybindConfig<K, C>
+	) => {
+		if (keybindConfig) {
+			console.log(`setting config: ${JSON.stringify(keybindConfig)}`);
+			setKeybindConfig(keybindConfig);
+		}
+
 		clearOutputChannels();
 
 		const inputChannels = inputConfig.channels;
@@ -152,7 +215,7 @@ function useInputs() {
 		unsubList.push(useEventListener('keyup', handleKeyUp).unsubscribe);
 	};
 
-	return { output, listen };
+	return { output, listen, setKeybindConfig };
 }
 
 export default useInputs;

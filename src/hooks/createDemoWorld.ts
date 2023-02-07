@@ -58,6 +58,7 @@ function createDemo(container: HTMLDivElement) {
 
 	createEffect(() => {
 		const orbControls = new OrbitControls(camera, renderer.domElement);
+		orbControls.enableDamping = true;
 		orbControls.target.set(0, 10, 0);
 		orbControls.update();
 	});
@@ -120,8 +121,32 @@ function createDemo(container: HTMLDivElement) {
 
 		if (controls()) {
 			controls()!.update(timeElapsedS);
+
+			// modifyMutable(
+			// 	camera,
+			// 	produce((_camera) => {
+			// 		const target = controls()?.target();
+			// 		if (target) {
+			// 			_camera.position.copy(target.position);
+			// 			_camera.quaternion.copy(target.quaternion);
+			// 		}
+			// 	})
+			// );
 		}
 	};
+
+	// createEffect(() => {
+	// 	modifyMutable(
+	// 		camera,
+	// 		produce((_camera) => {
+	// 			const target = controls()?.target();
+	// 			if (target) {
+	// 				_camera.position.copy(target.position);
+	// 				_camera.quaternion.copy(target.quaternion);
+	// 			}
+	// 		})
+	// 	);
+	// });
 
 	const RAF = () => {
 		requestAnimationFrame((t) => {

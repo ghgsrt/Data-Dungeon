@@ -3,13 +3,9 @@ import createDemo from '../../hooks/createDemoWorld';
 import createEntity from '../../hooks/createEntity';
 import createState, { CreateStateFns } from '../../hooks/createState';
 import useFiniteStateMachine from '../../hooks/useFiniteStateMachine';
-import useInputs, { InputConfig } from '../../hooks/useInputs';
-import {
-	KBPostFire,
-	StateKeybindFn,
-	validateKeybindConfig,
-} from '../../hooks/useKeybinds';
+import useInputs, { validateKeybindConfig } from '../../hooks/useInputs';
 import { CreateCustomEntity } from '../../types/Entity';
+import { InputConfig } from '../../types/Input';
 import { Codes } from '../../types/KeyCodes';
 import { StateBuilderMap } from '../../types/State';
 
@@ -24,7 +20,9 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 	const player = createEntity({
 		scene,
 		camera,
-		inputs: inputs.output,
+		// state: {
+
+		// }
 	});
 
 	const fsm: StateBuilderMap = {
@@ -48,25 +46,41 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 	} satisfies InputConfig<Codes>;
 
 	const keybindConfig = validateKeybindConfig<
-		typeof inputConfig.channels,
-		StateKeybindFn,
-		KBPostFire
-	>({
-		move: ({ input }) =>
-			input.channels.mods.includes('ShiftLeft') ? 'run' : 'walk',
-		jump: () => 'jump',
-		dance: () => 'dance',
-		mods: () => undefined,
-		_post: (props) => {
-			if (!player.readyForStateChange()) return;
-
-			props
-				? player.stateMachine()?.changeState(props)
-				: player.toDefaultState();
+		Codes,
+		typeof inputConfig.channels
+	>(
+		{
+			KeyW: (pressed) =>
+				player.setState('actions', 'move', 'forward', pressed),
+			KeyA: (pressed) =>
+				player.setState('actions', 'move', 'left', pressed),
+			KeyS: (pressed) =>
+				player.setState('actions', 'move', 'backward', pressed),
+			KeyD: (pressed) =>
+				player.setState('actions', 'move', 'right', pressed),
+			ShiftLeft: (pressed) =>
+				player.setState('actions', 'move', 'sprinting', pressed),
 		},
-	});
+		{
+			move: () =>
+				inputs.output.channels.mods.includes('ShiftLeft')
+					? 'run'
+					: 'walk',
+			jump: () => 'jump',
+			dance: () => 'dance',
+			mods: () => undefined,
+			_post: (result) => {
+				console.log(result);
+				result
+					? player.stateMachine()?.changeState(result)
+					: player.toDefaultState();
+			},
+		}
+	);
 
-	inputs.listen(inputConfig);
+	console.log(JSON.stringify(keybindConfig));
+
+	inputs.listen(inputConfig, keybindConfig);
 
 	player.loadModelAndAnims({
 		parentDir: 'qwop',
@@ -75,9 +89,7 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 		animNames: ['idle', 'walk', 'run', 'jump', 'dance'],
 	});
 
-	player.setStateMachine(
-		useFiniteStateMachine(player, fsm, inputs.output, keybindConfig)
-	); //! Ignore the error, validateKeybindConfig is all that matters
+	player.setStateMachine(useFiniteStateMachine(player, fsm));
 
 	return player;
 };
