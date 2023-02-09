@@ -15,7 +15,7 @@ export interface StateEnterProps {
 	action: AnimationAction;
 	prevState: State;
 	getPrevAction: () => AnimationAction;
-	setTimeFromRatio: (name?: string) => void;
+	setTimeFromRatio: (names?: string[]) => void;
 }
 export interface StateUpdateProps {
 	action: AnimationAction;

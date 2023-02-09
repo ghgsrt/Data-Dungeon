@@ -57,8 +57,9 @@ function createState(name: string, stateFns?: CreateStateFns): StateBuilderFn {
 					_props.getPrevAction = () =>
 						animations[_props.prevState?.name]?.action;
 
-					_props.setTimeFromRatio = (name?: string) => {
-						if (name && _props.prevState?.name !== name) return;
+					_props.setTimeFromRatio = (names?: string[]) => {
+						if (names && names.includes(_props.prevState?.name))
+							return;
 
 						const prevAction = _props.getPrevAction();
 						const ratio =

@@ -18,6 +18,7 @@ import {
 	PlaneGeometry,
 	MeshStandardMaterial,
 	CubeTextureLoader,
+	Vector3,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Entity } from '../types/Entity';
@@ -36,6 +37,7 @@ function createDemo(container: HTMLDivElement) {
 	const [mixers, setMixers] = createStore<AnimationMixer[]>([]);
 	const [prevRAF, setPrevRAF] = createSignal<number | null>(null);
 	const [controls, setControls] = createSignal<Entity>();
+	const [orbControls, setOrbControls] = createSignal<OrbitControls>();
 
 	modifyMutable(
 		renderer,
@@ -57,10 +59,12 @@ function createDemo(container: HTMLDivElement) {
 	});
 
 	createEffect(() => {
-		const orbControls = new OrbitControls(camera, renderer.domElement);
-		orbControls.enableDamping = true;
-		orbControls.target.set(0, 10, 0);
-		orbControls.update();
+		setOrbControls(new OrbitControls(camera, renderer.domElement));
+		orbControls()!.enableDamping = true;
+		orbControls()!.target.set(0, 10, 0);
+		// orbControls()!.minAzimuthAngle = Math.PI;
+		// orbControls()!.maxAzimuthAngle = Math.PI;
+		orbControls()!.update();
 	});
 
 	const dirLight: DirectionalLight = new DirectionalLight(0xffffff, 1.0);
@@ -119,6 +123,8 @@ function createDemo(container: HTMLDivElement) {
 			mixers.map((m) => m.update(timeElapsedS));
 		}
 
+		// if (orbControls()) orbControls()!.update();
+
 		if (controls()) {
 			controls()!.update(timeElapsedS);
 
@@ -128,7 +134,8 @@ function createDemo(container: HTMLDivElement) {
 			// 		const target = controls()?.target();
 			// 		if (target) {
 			// 			_camera.position.copy(target.position);
-			// 			_camera.quaternion.copy(target.quaternion);
+			// 			_camera.position.add(new Vector3(0, 10, -20));
+			// 			// _camera.quaternion.copy(target.quaternion);
 			// 		}
 			// 	})
 			// );
@@ -185,11 +192,13 @@ function createDemo(container: HTMLDivElement) {
 		camera,
 		scene,
 		mixers,
+		orbControls,
 		prevRAF,
 		controls,
 		setMixers,
 		setPrevRAF,
 		setControls,
+		setOrbControls,
 		onWindowResize,
 	};
 }
