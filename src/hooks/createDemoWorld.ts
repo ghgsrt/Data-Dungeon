@@ -1,4 +1,4 @@
-import { createSignal, createEffect } from 'solid-js';
+import { createSignal, createEffect, onMount } from 'solid-js';
 import {
 	createMutable,
 	createStore,
@@ -44,7 +44,7 @@ function createDemo(container: HTMLDivElement) {
 			_renderer.shadowMap.enabled = true;
 			_renderer.shadowMap.type = PCFSoftShadowMap;
 			_renderer.setPixelRatio(window.devicePixelRatio);
-			_renderer.setSize(window.innerWidth, window.innerHeight);
+			_renderer.setSize(container.offsetWidth, container.offsetHeight);
 		})
 	);
 
@@ -162,14 +162,19 @@ function createDemo(container: HTMLDivElement) {
 	};
 
 	const onWindowResize = () => {
-		modifyMutable(
-			camera,
-			produce((_camera) => {
-				_camera.aspect = window.innerWidth / window.innerHeight;
-				_camera.updateProjectionMatrix();
-			})
-		);
-		renderer.setSize(window.innerWidth, window.innerHeight);
+		// timeout necessary to allow container to resize before accessing its dimensions
+		// timeout of 0 basically indicates "wait until other queued stuff is done"
+		setTimeout(() => {
+			modifyMutable(
+				camera,
+				produce((_camera) => {
+					_camera.aspect =
+						container.offsetWidth / container.offsetHeight;
+					_camera.updateProjectionMatrix();
+				})
+			);
+			renderer.setSize(container.offsetWidth, container.offsetHeight);
+		}, 0);
 	};
 
 	useEventListener('resize', onWindowResize);
@@ -185,6 +190,7 @@ function createDemo(container: HTMLDivElement) {
 		setMixers,
 		setPrevRAF,
 		setControls,
+		onWindowResize,
 	};
 }
 

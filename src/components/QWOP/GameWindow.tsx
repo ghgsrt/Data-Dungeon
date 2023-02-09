@@ -1,13 +1,17 @@
-import { onMount } from 'solid-js';
+import { createEffect, onMount } from 'solid-js';
 import createDemo from '../../hooks/createDemoWorld';
 import createEntity from '../../hooks/createEntity';
 import createState, { CreateStateFns } from '../../hooks/createState';
 import useFiniteStateMachine from '../../hooks/useFiniteStateMachine';
 import useInputs, { validateKeybindConfig } from '../../hooks/useInputs';
-import { CreateCustomEntity } from '../../types/Entity';
+import useXRay from '../../hooks/useXRay';
+import globalStore from '../../stores/global';
+import { CreateCustomEntity, Entity } from '../../types/Entity';
 import { InputConfig } from '../../types/Input';
 import { Codes } from '../../types/KeyCodes';
 import { StateBuilderMap } from '../../types/State';
+
+import './qwop.css';
 
 const matchTimeOnEnter = (name: string): CreateStateFns => ({
 	enter: ({ action, setTimeFromRatio }) => {
@@ -63,7 +67,7 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 		},
 		{
 			move: () =>
-				inputs.output.channels.mods.includes('ShiftLeft')
+				inputs?.output.channels.mods.includes('ShiftLeft')
 					? 'run'
 					: 'walk',
 			jump: () => 'jump',
@@ -76,7 +80,7 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 		}
 	);
 
-	inputs.listen(inputConfig, keybindConfig);
+	inputs?.listen(inputConfig, keybindConfig);
 
 	player.loadModelAndAnims({
 		parentDir: 'qwop',
@@ -91,16 +95,63 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 };
 
 let container: HTMLDivElement;
+let xRay: HTMLDivElement;
+let xRayMachine: HTMLDivElement;
 function GameWindow() {
-	const inputs = useInputs();
+	const { activeComponent } = globalStore;
 
-	onMount(() => {
-		const { scene, camera, ...demo } = createDemo(container);
-		const player = createQWOPPlayer(scene, camera, inputs);
-		demo.setControls(player);
+	const inputs = useInputs();
+	const { start, drag, end, setElements, updateOffsets } = useXRay();
+
+	let demo: ReturnType<typeof createDemo>,
+		demo2: ReturnType<typeof createDemo>;
+	let player: Entity, player2: Entity;
+
+	createEffect(() => {
+		// the initial canvas sizing event is fired after the component is mounted
+		// but before the components are visible (thus, they get fed improper size values
+		// (or something like that lol)), so we need to wait for the activeComponent
+		// signal to then resize the canvases and update the offsets for the xray
+		if (activeComponent() === 'QWOP') {
+			demo.onWindowResize();
+			demo2.onWindowResize();
+			updateOffsets();
+		}
 	});
 
-	return <div ref={container} class="h-screen w-full" />;
+	onMount(() => {
+		demo = createDemo(container);
+		demo2 = createDemo(xRay);
+
+		player = createQWOPPlayer(demo.scene, demo.camera, inputs);
+		demo.setControls(player);
+
+		player2 = createQWOPPlayer(demo2.scene, demo2.camera);
+		demo2.setControls(player2);
+
+		setElements(xRay, xRayMachine, container);
+	});
+
+	createEffect(() => {
+		if (player2.modelReady()) console.log('Model Ready!');
+	});
+
+	return (
+		<div class="relative h-full w-full">
+			<div ref={container} class="z-0 h-full w-full"></div>
+			<div
+				id="xRayMachine"
+				ref={xRayMachine}
+				onMouseDown={start}
+				onMouseMove={drag}
+				onMouseUp={end}
+				class="absolute top-0 left-0 h-1/5 w-1/5 cursor-pointer overflow-hidden border border-black"
+			>
+				<div class="z-20 h-5 w-full bg-slate-700" />
+				<div ref={xRay} id="xRay" class="absolute" />
+			</div>
+		</div>
+	);
 }
 
 export default GameWindow;
