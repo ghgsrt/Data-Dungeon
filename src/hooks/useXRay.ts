@@ -1,27 +1,29 @@
-import { onMount } from 'solid-js';
 import { useDragAndDrop } from './useDragAndDrop';
 import useMatchElementSize from './useMatchElementSize';
+import globalStore from '../global';
+import { createEffect } from 'solid-js';
 
-function useXRay() {
+function useXRay(
+	componentName: string,
+	container: HTMLElement,
+	parent: HTMLElement,
+	reference: HTMLElement
+) {
 	const {
 		updateOffsets,
 		setContainer,
 		setParent,
 		setReference,
 		setElements,
-	} = useMatchElementSize(undefined, undefined, undefined, true);
-	const { start, drag, end, isDragging } = useDragAndDrop();
+	} = useMatchElementSize(container, parent, reference, true);
+	const { isDragging, setOnAny, setOnStart, setOnDrag, setOnEnd } =
+		useDragAndDrop(parent, { onAny: () => updateOffsets(), reference });
 
-	const _start = (e: MouseEvent) => start(e);
+	const { activeComponent } = globalStore;
 
-	const _drag = (e: MouseEvent) => {
-		if (isDragging()) {
-			drag(e);
-			updateOffsets();
-		}
-	};
-
-	onMount(() => setTimeout(() => updateOffsets(), 0));
+	createEffect(() => {
+		if (activeComponent() === componentName) updateOffsets();
+	});
 
 	return {
 		updateOffsets,
@@ -29,9 +31,11 @@ function useXRay() {
 		setParent,
 		setReference,
 		setElements,
-		start: _start,
-		drag: _drag,
-		end,
+		isDragging,
+		setOnAny,
+		setOnStart,
+		setOnDrag,
+		setOnEnd,
 	};
 }
 

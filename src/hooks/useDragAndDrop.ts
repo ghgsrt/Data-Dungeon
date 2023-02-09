@@ -1,43 +1,93 @@
-import { createSignal } from 'solid-js';
+import { createEffect, createSignal } from 'solid-js';
 import useOffset from './useOffset';
 
-export const useDragAndDrop = <T extends HTMLElement>() => {
+export interface DnDOptions {
+	reference?: HTMLElement;
+	onAny?: (event?: MouseEvent) => void;
+	onStart?: (event: MouseEvent) => void;
+	onDrag?: (event: MouseEvent) => void;
+	onEnd?: () => void;
+}
+
+export const useDragAndDrop = (element: HTMLElement, options?: DnDOptions) => {
 	const [isDragging, setIsDragging] = createSignal(false);
+	const [onStart, setOnStart] = createSignal(options?.onStart);
+	const [onDrag, setOnDrag] = createSignal(options?.onDrag);
+	const [onEnd, setOnEnd] = createSignal(options?.onEnd);
+	const [onAny, setOnAny] = createSignal(options?.onAny);
 	const [innerOffsetX, setInnerOffsetX] = createSignal(0);
 	const [innerOffsetY, setInnerOffsetY] = createSignal(0);
+	const {
+		element: _element,
+		offsets,
+		setElement,
+		updateOffsets,
+	} = useOffset(element, {
+		shallow: true,
+		shouldUpdate: true,
+	});
+
+	const any = (event?: MouseEvent) => {
+		if (!_element()) {
+			console.log('oh no');
+			return;
+		}
+
+		updateOffsets();
+		if (onAny()) onAny()!(event);
+	};
 
 	const start = (event: MouseEvent) => {
-		const element = event.target as T;
-
 		const { clientX, clientY } = event;
-		const { left, top } = useOffset(element, {
-			shallow: true,
-			shouldUpdate: false,
-		}).offsets;
-
-		console.log(left, top, clientX, clientY);
+		const { left, top } = offsets;
 
 		setInnerOffsetX(left - clientX);
 		setInnerOffsetY(top - clientY);
 
+		_element()!.addEventListener('mousemove', drag);
+		options?.reference?.addEventListener('mousemove', drag);
+		window.addEventListener('mouseup', end);
+
 		setIsDragging(true);
+
+		if (onStart()) onStart()!(event);
+		any(event);
 	};
 
 	const drag = (event: MouseEvent) => {
-		if (isDragging()) {
+		if (isDragging() && _element()) {
 			const x = event.clientX + innerOffsetX();
 			const y = event.clientY + innerOffsetY();
-			const element = event.target as T;
-			console.log(x);
-			console.log(y);
-			console.log(innerOffsetX());
-			console.log(innerOffsetY());
-			element.style.left = `${x}px`;
-			element.style.top = `${y}px`;
+
+			_element()!.style.left = `${x}px`;
+			_element()!.style.top = `${y}px`;
+
+			if (onDrag()) onDrag()!(event);
+			any(event);
 		}
 	};
 
-	const end = () => setIsDragging(false);
+	const end = () => {
+		(options?.reference ?? _element())!.removeEventListener(
+			'mousemove',
+			drag
+		);
+		window.removeEventListener('mouseup', end);
 
-	return { start, drag, end, isDragging };
+		setIsDragging(false);
+
+		if (onEnd()) onEnd()!();
+		any();
+	};
+
+	createEffect(() => _element()?.addEventListener('mousedown', start));
+
+	return {
+		isDragging,
+		setElement,
+		setOnAny,
+		setOnStart,
+		setOnDrag,
+		setOnEnd,
+	};
 };

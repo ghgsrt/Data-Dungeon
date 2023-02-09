@@ -95,6 +95,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 
 	//? Custom update function
 	//! Pass a callback into this instead of changing update()
+	//* e.g., entity.onUpdate(() => { ... })
 	const [_update, _setUpdate] = createSignal<Entity['update']>();
 	const onUpdate: Entity['onUpdate'] = (fn) => {
 		_setUpdate((_) => fn);

@@ -1,4 +1,4 @@
-import { createEffect, createRoot, createSignal } from 'solid-js';
+import { createEffect, createSignal } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import useEventListener from './useEventListener';
 
@@ -12,7 +12,9 @@ function useOffset(
 	element?: HTMLElement,
 	options: OffsetOptions = { shouldUpdate: true }
 ) {
-	const [_element, setElement] = createSignal(element);
+	const [_element, setElement] = createSignal<HTMLElement | undefined>(
+		element
+	);
 	const [offsets, setOffsets] = createStore({
 		top: 0,
 		left: 0,
@@ -34,7 +36,7 @@ function useOffset(
 
 				el = el.offsetParent;
 			}
-			console.log('updateOffsets', top, left);
+
 			setOffsets({
 				top,
 				left,
@@ -44,6 +46,7 @@ function useOffset(
 		}
 	};
 
+	//? may or may not be needed
 	if (options?.shouldUpdate) {
 		createEffect(() => {
 			if (_element()) updateOffsets();
@@ -51,7 +54,7 @@ function useOffset(
 		useEventListener('resize', updateOffsets, false).subscribe();
 	}
 
-	return { offsets, updateOffsets, setElement };
+	return { element: _element, offsets, updateOffsets, setElement };
 }
 
 export default useOffset;

@@ -4,14 +4,12 @@ import createEntity from '../../hooks/createEntity';
 import createState, { CreateStateFns } from '../../hooks/createState';
 import useFiniteStateMachine from '../../hooks/useFiniteStateMachine';
 import useInputs, { validateKeybindConfig } from '../../hooks/useInputs';
-import useXRay from '../../hooks/useXRay';
-import globalStore from '../../stores/global';
+import globalStore from '../../global';
 import { CreateCustomEntity, Entity } from '../../types/Entity';
 import { InputConfig } from '../../types/Input';
 import { Codes } from '../../types/KeyCodes';
 import { StateBuilderMap } from '../../types/State';
-
-import './qwop.css';
+import XRay from '../XRay';
 
 const matchTimeOnEnter = (name: string): CreateStateFns => ({
 	enter: ({ action, setTimeFromRatio }) => {
@@ -94,62 +92,45 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 	return player;
 };
 
-let container: HTMLDivElement;
 let xRay: HTMLDivElement;
-let xRayMachine: HTMLDivElement;
+let container: HTMLDivElement;
 function GameWindow() {
 	const { activeComponent } = globalStore;
-
 	const inputs = useInputs();
-	const { start, drag, end, setElements, updateOffsets } = useXRay();
 
-	let demo: ReturnType<typeof createDemo>,
-		demo2: ReturnType<typeof createDemo>;
 	let player: Entity, player2: Entity;
 
 	createEffect(() => {
-		// the initial canvas sizing event is fired after the component is mounted
-		// but before the components are visible (thus, they get fed improper size values
-		// (or something like that lol)), so we need to wait for the activeComponent
-		// signal to then resize the canvases and update the offsets for the xray
-		if (activeComponent() === 'QWOP') {
-			demo.onWindowResize();
-			demo2.onWindowResize();
-			updateOffsets();
-		}
+		if (player2?.modelReady()) console.log('Model Ready!');
 	});
 
 	onMount(() => {
-		demo = createDemo(container);
-		demo2 = createDemo(xRay);
-
+		const demo = createDemo(container);
 		player = createQWOPPlayer(demo.scene, demo.camera, inputs);
 		demo.setControls(player);
 
+		const demo2 = createDemo(xRay);
 		player2 = createQWOPPlayer(demo2.scene, demo2.camera);
 		demo2.setControls(player2);
 
-		setElements(xRay, xRayMachine, container);
-	});
-
-	createEffect(() => {
-		if (player2.modelReady()) console.log('Model Ready!');
+		// the initial canvas sizing event is fired after the component is mounted
+		// but before the components are visible (thus, they get fed improper size values
+		// (or something like that lol)), so we need to wait for the activeComponent
+		// signal to then resize the canvases
+		createEffect(() => {
+			if (activeComponent() === 'QWOP') {
+				demo.onWindowResize();
+				demo2.onWindowResize();
+			}
+		});
 	});
 
 	return (
 		<div class="relative h-full w-full">
-			<div ref={container} class="z-0 h-full w-full"></div>
-			<div
-				id="xRayMachine"
-				ref={xRayMachine}
-				onMouseDown={start}
-				onMouseMove={drag}
-				onMouseUp={end}
-				class="absolute top-0 left-0 h-1/5 w-1/5 cursor-pointer overflow-hidden border border-black"
-			>
-				<div class="z-20 h-5 w-full bg-slate-700" />
-				<div ref={xRay} id="xRay" class="absolute" />
-			</div>
+			<div ref={container} class="z-0 h-full w-full" />
+			<XRay name="QWOP" reference={container}>
+				<div ref={xRay} class="absolute" />
+			</XRay>
 		</div>
 	);
 }

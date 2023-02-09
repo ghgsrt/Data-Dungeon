@@ -3,7 +3,7 @@ import GameWindow from './components/QWOP/GameWindow';
 import Model from './components/Model.jsx';
 import InputExample from './components/InputExample';
 import Example from './components/Example';
-import globalStore from './stores/global';
+import globalStore from './global';
 
 function App() {
 	const [currentDemoTitle, setCurrentDemoTitle] = createSignal<string>('');

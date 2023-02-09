@@ -1,9 +1,0 @@
-#xRayMachine::after {
-	content: '';
-	position: absolute;
-	top: 0;
-	left: 0;
-	height: 1.25rem;
-	width: 100%;
-	background: rgb(61, 69, 77);
-}

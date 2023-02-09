@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal } from 'solid-js';
+import { createEffect, createSignal } from 'solid-js';
 import useOffset from './useOffset';
 
 function useMatchElementSize(
@@ -8,39 +8,28 @@ function useMatchElementSize(
 	shouldMatchPos = false
 ) {
 	const [_container, setContainer] = createSignal(container);
-	const [_parent, setParent] = createSignal(parent);
-	const [_reference, setReference] = createSignal(reference);
-	const parentOffsets = useOffset(_parent(), { shallow: true });
-	const referenceOffsets = useOffset(_reference());
+	const _parent = useOffset(parent, { shallow: true });
+	const _reference = useOffset(reference);
 
 	createEffect(() => {
-		if (_parent()) parentOffsets.setElement(_parent());
-	});
-	createEffect(() => {
-		if (_reference()) referenceOffsets.setElement(_reference());
-	});
-
-	createEffect(() => {
-		if (_container() && _reference()) {
-			_container()!.style.width = `${referenceOffsets.offsets.width}px`;
-			_container()!.style.height = `${referenceOffsets.offsets.height}px`;
+		if (_container() && _reference.element()) {
+			_container()!.style.width = `${_reference.offsets.width}px`;
+			_container()!.style.height = `${_reference.offsets.height}px`;
 
 			if (shouldMatchPos) {
-				if (_parent()) {
-					_container()!.style.top = `${-parentOffsets.offsets.top}px`;
-					_container()!.style.left = `${-parentOffsets.offsets
-						.left}px`;
-				} else {
-					_container()!.style.top = `${referenceOffsets.offsets.top}px`;
-					_container()!.style.left = `${referenceOffsets.offsets.left}px`;
-				}
+				_container()!.style.top = `${-(
+					_parent.element() ? _parent : _reference
+				).offsets.top}px`;
+				_container()!.style.left = `${-(
+					_parent.element() ? _parent : _reference
+				).offsets.left}px`;
 			}
 		}
 	});
 
 	const updateOffsets = () => {
-		parentOffsets.updateOffsets();
-		referenceOffsets.updateOffsets();
+		_parent.updateOffsets();
+		_reference.updateOffsets();
 	};
 
 	const setElements = (
@@ -49,8 +38,8 @@ function useMatchElementSize(
 		reference: HTMLElement
 	) => {
 		setContainer(container);
-		setParent(parent);
-		setReference(reference);
+		_parent.setElement(parent);
+		_reference.setElement(reference);
 	};
 
 	return {
@@ -60,8 +49,8 @@ function useMatchElementSize(
 		updateOffsets,
 		setElements,
 		setContainer,
-		setParent,
-		setReference,
+		setParent: _parent.setElement,
+		setReference: _reference.setElement,
 	};
 }
 
