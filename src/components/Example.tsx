@@ -1,7 +1,7 @@
 import { onMount, createSignal, createEffect } from 'solid-js';
 
 // "static" variable
-const greetList = ['World', 'Sherman', 'Bryonna', 'Colin'];
+const greetList = ['World', 'Sherman', 'Bryonna', 'Coin'];
 
 function Example() {
 	// reactive variables
@@ -11,7 +11,12 @@ function Example() {
 	// callback is fired whenever the dependency, counter, changes outside of it
 	createEffect(() => {
 		const idx = counter() % greetList.length;
+
+		//! be careful with setting dependencies inside createEffects,
+		//! this may cause an infinite loop. this is just an example
+		//! that doesn't
 		setCounter(idx); // does not trigger the callback
+
 		setGreeting(greetList[idx]);
 	});
 
@@ -23,7 +28,7 @@ function Example() {
 	return (
 		<>
 			<button
-				class="w-24 h-10 m-10 rounded-xl bg-gray-200 hover:bg-gray-300 transition-colors"
+				class="m-10 h-10 w-24 rounded-xl bg-gray-200 transition-colors hover:bg-gray-300"
 				onClick={() => setCounter((prev) => prev + 1)}
 			>
 				Next

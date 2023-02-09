@@ -1,4 +1,4 @@
-import { createEffect, createSignal } from 'solid-js';
+import { createSignal } from 'solid-js';
 import {
 	createStore,
 	createMutable,
@@ -19,13 +19,11 @@ import {
 	EOptionsConfig,
 	EntityConfig,
 	Entity,
-	LoadModelsConfig,
 	Animations,
 	ThreeTarget,
 	ThreeLoader,
 } from '../types/Entity';
 import { FiniteStateMachine } from '../types/State';
-import useFiniteStateMachine from './useFiniteStateMachine';
 
 type EOCVals = EOptionsConfig[keyof EOptionsConfig];
 const defaultOptions: Record<string, EOCVals> = {
@@ -101,8 +99,10 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		_setUpdate((_) => fn);
 	};
 
-	const sanitizeAnimName = (name: string): string =>
-		name.split('.')[0].split('/')[0];
+	const sanitizeAnimName = (name: string): string => {
+		const [_dir, _name] = name.split('.')[0].split('/');
+		return _name ?? _dir;
+	};
 
 	const readyForStateChange: Entity['readyForStateChange'] = () =>
 		Object.keys(animations).length > 0;
@@ -188,8 +188,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 			getLoader(ext, manager).load(
 				path,
 				passAnimToLoad,
-				(xhr) =>
-					logLoading(xhr, `Animation[${name}]`),
+				(xhr) => logLoading(xhr, `Animation[${name}]`),
 				logLoadError
 			);
 		}

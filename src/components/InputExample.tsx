@@ -1,5 +1,6 @@
 import { onMount, createSignal, createEffect, For } from 'solid-js';
-import useInputs, { InputConfig } from '../hooks/useInputs';
+import useInputs from '../hooks/useInputs';
+import { InputConfig } from '../types/Input';
 import { Keys, Codes } from '../types/KeyCodes';
 import SlideToggle from './SlideToggle';
 
