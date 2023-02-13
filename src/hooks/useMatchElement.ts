@@ -1,7 +1,7 @@
 import { createEffect, createSignal } from 'solid-js';
 import useOffset from './useOffset';
 
-function useMatchElementSize(
+function useMatchElement(
 	container?: HTMLElement,
 	parent?: HTMLElement,
 	reference?: HTMLElement,
@@ -54,4 +54,4 @@ function useMatchElementSize(
 	};
 }
 
-export default useMatchElementSize;
+export default useMatchElement;

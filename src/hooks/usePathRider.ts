@@ -1,5 +1,5 @@
 export interface PathRider {
-	ride: () => void;
+	ride: (ratio?: number) => void;
 	clickToScroll: (e: MouseEvent) => void;
 	onClick: (e: MouseEvent, callback: (pt: DOMPoint) => void) => void;
 	// getLengthAtPoint: (pt: DOMPoint) => number;
@@ -78,6 +78,7 @@ const usePathRider = ({
 			? custom.input
 			: window.scrollY || window.pageYOffset;
 		const dist = pathLen * (ratio ? ratio : input / (max || 1));
+
 		const pos = path.getPointAtLength(dist);
 		let angle: number;
 

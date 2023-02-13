@@ -8,6 +8,7 @@ import {
 	LoadingManager,
 	AnimationClip,
 	AnimationAction,
+	SkeletonHelper,
 } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
@@ -46,6 +47,7 @@ export interface LoadModelsConfig {
 	modelExt: ThreeExtension;
 	animsDir?: string;
 	animNames?: string[];
+	additAnimNames?: string[]; //! not implemented
 	animsExt?: ThreeExtension;
 }
 
@@ -66,6 +68,7 @@ export interface Entity {
 
 	animsDir: Accessor<string>;
 	animNames: string[];
+	additAnimNames: string[];
 	animsExt: Accessor<string>;
 
 	defaultAnim: Accessor<string>;
@@ -79,6 +82,7 @@ export interface Entity {
 	decceleration: Accessor<Vector3>;
 
 	target: Accessor<Group | undefined>;
+	skellyboi: Accessor<SkeletonHelper | undefined>;
 	manager: LoadingManager;
 
 	state: Record<string, any>;
@@ -92,6 +96,7 @@ export interface Entity {
 
 	setAnimsDir: Setter<string>; // note: this is a default
 	setAnimNames: SetStoreFunction<string[]>;
+	setAdditAnimNames: SetStoreFunction<string[]>;
 	setAnimsExt: Setter<string>; // note: this is a default
 
 	setDefaultAnim: Setter<string>;
@@ -111,6 +116,12 @@ export interface Entity {
 	onUpdate: (fn: Entity['update']) => void;
 	readyForStateChange: () => boolean;
 	toDefaultState: () => void;
+	toggleAction: (
+		name: string,
+		weight: number,
+		pressed: boolean,
+		timeScale: number
+	) => void;
 	loadModelAndAnims: (loadConfig: LoadModelsConfig) => void;
 	update: (timeInSeconds: number) => void;
 }

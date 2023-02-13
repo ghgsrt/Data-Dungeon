@@ -1,6 +1,5 @@
 import { createEffect, createSignal, For, JSX } from 'solid-js';
 import GameWindow from './components/QWOP/GameWindow';
-import Model from './components/Model.jsx';
 import InputExample from './components/InputExample';
 import Example from './components/Example';
 import globalStore from './global';
@@ -9,10 +8,7 @@ function App() {
 	const [currentDemoTitle, setCurrentDemoTitle] = createSignal<string>('');
 	const { setActiveComponent } = globalStore;
 
-	createEffect(() => {
-		console.log(`herro ${currentDemoTitle()}`);
-		setActiveComponent(currentDemoTitle());
-	});
+	createEffect(() => setActiveComponent(currentDemoTitle()));
 
 	//! ADD YOUR DEMO HERE
 	//? Key: title of your demo

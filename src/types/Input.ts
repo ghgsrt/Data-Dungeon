@@ -33,12 +33,12 @@ export interface UseInputs<
 }
 
 export type KeybindFn = (pressed: boolean) => void;
-export type ChannelKeybindFn = () => string | undefined | void;
+export type ChannelKeybindFn = () => string | string[] | undefined;
 
 export type Keybinds<F extends (...args: any) => any> = Record<string, F>;
 export type PostFire<F extends (...args: any) => any> = Record<
 	'_post',
-	(result: ReturnType<F>) => void
+	(result: ReturnType<F>, from?: string) => void
 >;
 export type ChannelKeybinds<F extends (...args: any) => any> = ValidConfig<
 	keyof Channels,

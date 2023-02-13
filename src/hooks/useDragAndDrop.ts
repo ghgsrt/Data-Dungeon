@@ -3,10 +3,10 @@ import useOffset from './useOffset';
 
 export interface DnDOptions {
 	reference?: HTMLElement;
-	onAny?: (event?: MouseEvent) => void;
 	onStart?: (event: MouseEvent) => void;
 	onDrag?: (event: MouseEvent) => void;
-	onEnd?: () => void;
+	onEnd?: (event?: MouseEvent) => void;
+	onAny?: (event?: MouseEvent) => void;
 }
 
 export const useDragAndDrop = (element: HTMLElement, options?: DnDOptions) => {
@@ -67,7 +67,8 @@ export const useDragAndDrop = (element: HTMLElement, options?: DnDOptions) => {
 		}
 	};
 
-	const end = () => {
+	const end = (event?: MouseEvent) => {
+		//! TODO: Fix this (both need to have the event listener removed 🤦🏻‍♂️)
 		(options?.reference ?? _element())!.removeEventListener(
 			'mousemove',
 			drag
@@ -76,8 +77,8 @@ export const useDragAndDrop = (element: HTMLElement, options?: DnDOptions) => {
 
 		setIsDragging(false);
 
-		if (onEnd()) onEnd()!();
-		any();
+		if (onEnd()) onEnd()!(event);
+		any(event);
 	};
 
 	createEffect(() => _element()?.addEventListener('mousedown', start));

@@ -12,6 +12,10 @@ import {
 	AnimationMixer,
 	LoadingManager,
 	Quaternion,
+	AnimationUtils,
+	AnimationBlendMode,
+	AdditiveAnimationBlendMode,
+	SkeletonHelper,
 } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
@@ -57,6 +61,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 	const animsBasePath = './animations'; //? parent directory is 'public'
 	const [animsDir, setAnimsDir] = createSignal('');
 	const [animNames, setAnimNames] = createStore<string[]>([]);
+	const [additAnimNames, setAdditAnimNames] = createStore<string[]>([]);
 	const [animsExt, setAnimsExt] = createSignal('');
 
 	const [defaultAnim, setDefaultAnim] = createSignal('');
@@ -73,6 +78,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 	);
 
 	const [target, setTarget] = createSignal<Group>();
+	const [skellyboi, setSkellyboi] = createSignal<SkeletonHelper>();
 	const [manager, setManager] = createStore(new LoadingManager());
 	let mixer: AnimationMixer; //! CANNOT BE REACTIVE!!!
 
@@ -112,6 +118,25 @@ function createEntity(entityConfig: EntityConfig): Entity {
 
 	const applyShadows = (c: Object3D) => (c.castShadow = shadow());
 
+	const toggleAction: Entity['toggleAction'] = (
+		name,
+		weight,
+		pressed,
+		timeScale = 1
+	) => {
+		const prevAction =
+			animations[stateMachine()?.currentState()?.name ?? 'idle'].action;
+		const currDur = prevAction.getClip().duration;
+		const action = animations[name].action;
+
+		action.enabled = pressed;
+		action.setEffectiveTimeScale(timeScale);
+		action.setEffectiveWeight(pressed ? weight : 0);
+		action.time = action.getClip().duration / currDur;
+		action.blendMode = AdditiveAnimationBlendMode;
+		pressed ? action.play() : action.stop();
+	};
+
 	const getModelPath = (): string =>
 		`${modelsBasePath}/${modelExt()}/${modelDir()}/${modelName()}.${modelExt()}`;
 
@@ -133,16 +158,23 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		return `${animsBasePath}/${ext}/${dir}/${name}.${ext}`;
 	};
 
-	const onLoad = (anim: ThreeTarget) => {
-		const clip = anim.animations[0];
+	const onLoad = (anim: ThreeTarget, name: string, isAdditive: boolean) => {
+		let clip = anim.animations[0];
+		if (isAdditive) {
+			AnimationUtils.makeClipAdditive(clip);
+
+			if (clip.name.endsWith('_pose')) {
+				clip = AnimationUtils.subclip(clip, clip.name, 2, 3, 30);
+			}
+		}
+
 		const action = mixer.clipAction(clip);
 
 		modifyMutable(
 			animations,
 			produce((_animations) => {
-				_animations[
-					sanitizeAnimName(animNames[Object.keys(animations).length])
-				] = {
+				// sanitizeAnimName(animNames[Object.keys(animations).length])
+				_animations[sanitizeAnimName(name)] = {
 					clip,
 					action,
 				};
@@ -151,7 +183,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 	};
 
 	//? "proxy" fn necessary for tracking reactivity when branching into onLoad
-	const passAnimToLoad: typeof onLoad = (a) => onLoad(a);
+	const passAnimToLoad: typeof onLoad = (a, b, c) => onLoad(a, b, c);
 
 	const loaders: Record<string, ThreeLoader> = {
 		fbx: new FBXLoader(),
@@ -172,6 +204,24 @@ function createEntity(entityConfig: EntityConfig): Entity {
 	};
 	const logLoadError = (error: ErrorEvent) => console.log(error);
 
+	const loadAnim = (name: string, isAdditive = false) => {
+		setState('actions', (_) => ({ [name]: false }));
+		setState('timers', (_) => ({ [name]: 0 }));
+
+		const path = reconcileAnimPath(name);
+		const ext = path.split('.')[2];
+		getLoader(ext, manager).load(
+			path,
+			(a) => passAnimToLoad(a, name, isAdditive),
+			(xhr) =>
+				logLoading(
+					xhr,
+					`Animation[${name}]${isAdditive ? ' (addit.)' : ''}`
+				),
+			logLoadError
+		);
+	};
+
 	const loadAnims = (_target: Group): void => {
 		setManager(
 			produce((_manager) => {
@@ -179,19 +229,8 @@ function createEntity(entityConfig: EntityConfig): Entity {
 			})
 		);
 
-		for (const name of animNames) {
-			setState('actions', (_) => ({ [name]: false }));
-			setState('timers', (_) => ({ [name]: 0 }));
-
-			const path = reconcileAnimPath(name);
-			const ext = path.split('.')[2];
-			getLoader(ext, manager).load(
-				path,
-				passAnimToLoad,
-				(xhr) => logLoading(xhr, `Animation[${name}]`),
-				logLoadError
-			);
-		}
+		for (const name of animNames) loadAnim(name);
+		for (const name of additAnimNames) loadAnim(name, true);
 	};
 
 	const extractTarget = (_target: ThreeTarget): Group => {
@@ -213,7 +252,15 @@ function createEntity(entityConfig: EntityConfig): Entity {
 				_target.traverse(applyShadows);
 
 				setTarget(_target);
-				setScene(produce((_scene) => _scene.add(_target)));
+				//! DEBUG
+				const skellyboi = new SkeletonHelper(_target);
+				setSkellyboi(skellyboi);
+				setScene(
+					produce((_scene) => {
+						_scene.add(_target);
+						_scene.add(skellyboi);
+					})
+				);
 
 				mixer = new AnimationMixer(_target);
 				loadAnims(_target);
@@ -230,6 +277,9 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		if (loadConfig.animNames) {
 			setAnimNames(loadConfig.animNames);
 			setDefaultAnim(loadConfig.animNames[0]);
+		}
+		if (loadConfig.additAnimNames) {
+			setAdditAnimNames(loadConfig.additAnimNames);
 		}
 		setAnimsExt(loadConfig.animsExt ?? loadConfig.modelExt);
 
@@ -274,7 +324,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		if (sprinting) acc.multiplyScalar(5.0);
 
 		if (forward) velocity().z += acc.z * timeInSeconds;
-		if (backward) velocity().z -= acc.z * timeInSeconds;
+		if (backward) velocity().z -= (acc.z / 1.85) * timeInSeconds;
 		//! scuffed behavior. obey the channels damnit
 		if (left || right) {
 			_A.set(0, 1, 0);
@@ -333,6 +383,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 
 		animsDir, // note: this is a default
 		animNames,
+		additAnimNames,
 		animsExt, // note: this is a default
 
 		defaultAnim,
@@ -346,6 +397,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		decceleration,
 
 		target,
+		skellyboi,
 		manager,
 
 		state,
@@ -359,6 +411,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 
 		setAnimsDir,
 		setAnimNames,
+		setAdditAnimNames,
 		setAnimsExt,
 
 		setDefaultAnim,
@@ -378,6 +431,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		onUpdate,
 		readyForStateChange,
 		toDefaultState,
+		toggleAction,
 		loadModelAndAnims,
 		update,
 	};

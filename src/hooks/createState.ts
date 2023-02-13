@@ -1,4 +1,5 @@
 import { modifyMutable, produce } from 'solid-js/store';
+import { AnimationAction, AnimationMixer, Event } from 'three';
 import { Entity } from '../types/Entity';
 import {
 	State,
@@ -71,6 +72,8 @@ function createState(name: string, stateFns?: CreateStateFns): StateBuilderFn {
 					let prevAction;
 					if ((prevAction = _props.getPrevAction()))
 						_props.action.crossFadeFrom(prevAction, 0.5, true);
+
+					// _props.action.clampWhenFinished = false;
 				}
 
 				callback(_props, entity);
@@ -99,6 +102,7 @@ function createState(name: string, stateFns?: CreateStateFns): StateBuilderFn {
 				entity,
 				{
 					prevState,
+					getMixer,
 				}
 			);
 		};
@@ -133,6 +137,7 @@ function createState(name: string, stateFns?: CreateStateFns): StateBuilderFn {
 				});
 
 			entity.setState('timers', name, 0);
+			// console.log(name, entity.state.timers['falling-down']);
 
 			getMixer().removeEventListener('finished', finished);
 		};
@@ -140,7 +145,9 @@ function createState(name: string, stateFns?: CreateStateFns): StateBuilderFn {
 		const exit: State['exit'] = () => {
 			if (stateFns?.exit)
 				stateFnWrapper<StateExitProps>(stateFns.exit, entity);
-			cleanup;
+
+			// console.log('cleaning up', name);
+			cleanup();
 
 			entity.setState('actions', name, false);
 		};

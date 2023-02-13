@@ -16,6 +16,7 @@ export interface StateEnterProps {
 	prevState: State;
 	getPrevAction: () => AnimationAction;
 	setTimeFromRatio: (names?: string[]) => void;
+	getMixer: () => AnimationMixer;
 }
 export interface StateUpdateProps {
 	action: AnimationAction;
@@ -28,6 +29,8 @@ export interface StateFinishedProps {
 }
 export interface StateCleanupProps {
 	action: AnimationAction;
+	prevState: State;
+	getPrevAction: () => AnimationAction;
 	getMixer: () => AnimationMixer;
 }
 export interface StateExitProps {
@@ -52,6 +55,6 @@ export interface FiniteStateMachine {
 	// setKeybindConfig: (config: KeybindConfig) => void;
 	addState: (name: string, builderFn: StateBuilderFn) => void;
 	addStates: (states: StateBuilderMap) => void;
-	changeState: (name: string) => void;
+	changeState: (name: string, callExit?: boolean) => void;
 	update: (timeElapsed: number) => void;
 }

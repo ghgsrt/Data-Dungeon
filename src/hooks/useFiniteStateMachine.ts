@@ -1,5 +1,6 @@
 import { createEffect, createSignal, onCleanup } from 'solid-js';
 import { createStore } from 'solid-js/store';
+import { AnimationMixer, AnimationAction, Event } from 'three';
 import { Entity } from '../types/Entity';
 import { StateBuilderMap, FiniteStateMachine, State } from '../types/State';
 
@@ -24,13 +25,16 @@ function useFiniteStateMachine(
 		console.log(currentState()?.name);
 	});
 
-	const changeState: FiniteStateMachine['changeState'] = (name) => {
+	const changeState: FiniteStateMachine['changeState'] = (
+		name,
+		callExit = true
+	) => {
 		if (!entity.readyForStateChange()) return;
 
 		const prevState = currentState();
 
 		if (prevState) {
-			if (prevState.name === name) return;
+			if (!callExit || prevState.name === name) return;
 			prevState.exit();
 		}
 

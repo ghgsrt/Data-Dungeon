@@ -50,7 +50,11 @@ function useInputs<
 	const unsubList: (() => void)[] = [];
 
 	const firePost = (result?: any) => {
-		(_keybindConfig()?.channels?._post as PostFire<any>['_post'])?.(result);
+		result = Array.isArray(result) ? result : [result];
+		(_keybindConfig()?.channels?._post as PostFire<any>['_post'])?.(
+			result[0],
+			result[1]
+		);
 	};
 
 	const callKeybind = (key: string, pressed: boolean) => {
@@ -68,7 +72,7 @@ function useInputs<
 
 		const res = _keybindConfig().channels?.[channel]?.();
 		if (
-			res &&
+			output.channels[channel].length > 0 &&
 			(channel !== 'mods' || _keybindConfig().options?.useModsChannel)
 		)
 			firePost(res);
@@ -119,7 +123,7 @@ function useInputs<
 		);
 
 		callKeybind(key, false);
-		if (output.pressed.length === 0) firePost();
+		if (output.pressed.length === 0) firePost([undefined, 'useInputs']);
 	};
 
 	const listen = <T extends KeysOrCodes>(
@@ -196,8 +200,8 @@ function useInputs<
 			if (shouldReturn || output.pressed.includes(key)) return;
 			e.preventDefault();
 
-			mutOutChannels(pushToChannel, channels, values);
 			pressKey(key);
+			mutOutChannels(pushToChannel, channels, values);
 		};
 
 		const handleKeyUp = (e: Event) => {
@@ -206,8 +210,8 @@ function useInputs<
 			if (shouldReturn || !output.pressed.includes(key)) return;
 			e.preventDefault();
 
-			mutOutChannels(removeFromChannel, channels, values);
 			releaseKey(key);
+			mutOutChannels(removeFromChannel, channels, values);
 		};
 
 		unsubList.push(useEventListener('keydown', handleKeyDown).unsubscribe);
