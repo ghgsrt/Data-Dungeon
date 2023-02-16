@@ -1,102 +1,134 @@
 import { createStore, produce } from 'solid-js/store';
 import useEventListener from './useEventListener';
-import { KeysOrCodes } from '../types/KeyCodes';
-import { createSignal } from 'solid-js';
+import { Codes, KeysOrCodes } from '../types/KeyCodes';
+import { createEffect, createSignal } from 'solid-js';
 import {
 	KeybindConfig,
-	UseInputs,
 	Output,
-	PostFire,
 	InputConfig,
 	Channels,
-	ChannelKeybindFn,
-	Indexer,
-	KBValidator,
-	KeybindFn,
-	KeybindOptions,
-	ValidConfig,
+	InputChannels,
+	KeyFn,
 } from '../types/Input';
-
-export const validateKeybindConfig = <
-	KT extends Indexer,
-	CT,
-	KF = KeybindFn,
-	CF extends (...args: any) => any = ChannelKeybindFn
-	// FLAGS extends string = string
->(
-	keys: KBValidator<KT, KF>,
-	// channels: KBCValidator<FLAGS, keyof CT, CF>,
-	channels: ValidConfig<keyof CT, CF> & PostFire<CF>,
-	options?: KeybindOptions
-) => ({
-	keys,
-	channels,
-	options,
-});
+import useStateManager, {
+	Response,
+	StateManagerConfig,
+	StateManagerFnProps,
+	StateObject,
+} from './useStateManager';
 
 //! SHOULD I TREAT NO CAPS AND CAPS THE EXACT SAME WHEN USE KEY????????
 function useInputs<
-	K extends (...args: any) => any,
-	C extends (...args: any) => any
->(keybindConfig?: KeybindConfig<K, C>): UseInputs<K, C> {
-	const [_keybindConfig, setKeybindConfig] = createSignal<
-		Partial<KeybindConfig<K, C>>
-	>(keybindConfig ?? {});
+	KT extends KeysOrCodes = Codes,
+	R extends StateObject = Response,
+	PR = string
+>(
+	keybindConfig?: KeybindConfig<KT, InputChannels<KT>, R, PR>,
+	stateManagerConfig?: StateManagerConfig<InputChannels<KT>, R, PR>
+) {
+	const [_keybindConfig, setKeybindConfig] =
+		createSignal<typeof keybindConfig>(keybindConfig);
 
+	const [_stateManagerConfig, setStateManagerConfig] =
+		createSignal<typeof stateManagerConfig>(stateManagerConfig);
+	const [stateManager, setStateManager] = createStore(useStateManager([]));
+
+	const [inputConfig, setInputConfig] = createSignal<InputConfig<KT>>({
+		channels: {},
+		options: { use: 'code' },
+	});
 	const [output, setOutput] = createStore<Output>({
 		channels: {},
 		pressed: [],
 	});
 	const unsubList: (() => void)[] = [];
 
-	const firePost = (result?: any) => {
-		result = Array.isArray(result) ? result : [result];
-		(_keybindConfig()?.channels?._post as PostFire<any>['_post'])?.(
-			result[0],
-			result[1]
-		);
+	createEffect(() => {
+		if (inputConfig())
+			setStateManager(
+				useStateManager(Object.keys(inputConfig().channels))
+			);
+	});
+
+	const firePost = (_result?: R | PR, channel?: string) => {
+		let result = _result;
+		if (_stateManagerConfig() && _result && channel) {
+			const stateMachine = stateManager.stateMachines[channel];
+			stateManager.changeState(_result as R);
+			stateMachine.changeState(_result as R);
+
+			const props = [
+				stateMachine.state(),
+				stateMachine.prevState(),
+				stateManager.state(),
+				stateManager.prevState(),
+			] as StateManagerFnProps<R>;
+
+			result = (_stateManagerConfig()![channel]?.(props) ??
+				(result as R).message) as PR;
+		}
+
+		if (typeof result !== 'string') result = (result as R).message as PR;
+
+		_keybindConfig()?.post?.(result as PR);
 	};
 
 	const callKeybind = (key: string, pressed: boolean) => {
 		if (!_keybindConfig()) return;
 
-		_keybindConfig().keys?.[key]?.(pressed);
+		let res = (_keybindConfig()!.keys as Record<string, KeyFn<PR>>)?.[
+			key
+		]?.(pressed);
+		// if (res === undefined || typeof res === 'string')
+		// {
+		// 	res = { message: res } as R
+		// }
+		if (res !== undefined) firePost(res);
 	};
-	const callChannelKeybind = (channel: string) => {
+	const callChannelKeybind = (channel: string, key: string): void => {
 		if (!_keybindConfig()) return;
 
-		if (channel === 'mods') {
-			callChannelKeybind('move');
-			return;
-		}
+		//! might need different prop passed for key
+		// if (channel === 'mods') return callChannelKeybind('move', key);
 
-		const res = _keybindConfig().channels?.[channel]?.();
+		let res = _keybindConfig()!.channels?.[channel]?.(
+			key,
+			output.channels[channel][0]
+		);
+		if (res === undefined || typeof res === 'string')
+			res = {
+				message: res ? res : channel,
+				key,
+				channelHead: output.channels[channel][0],
+			} as R;
+
 		if (
-			output.channels[channel].length > 0 &&
-			(channel !== 'mods' || _keybindConfig().options?.useModsChannel)
+			// output.channels[channel].length > 0 &&
+			channel !== 'mods' ||
+			_keybindConfig()!.options?.useModsChannel
 		)
-			firePost(res);
+			firePost(res, channel);
 	};
 
 	const addChannel = (channel: string) => {
 		setOutput('channels', (channels) => ({ ...channels, [channel]: [] }));
 	};
-	const pushToChannel = (channel: string, item: string) => {
-		setOutput('channels', channel, (channel) => [item, ...channel]);
+	const pushToChannel = (channel: string, key: string) => {
+		setOutput('channels', channel, (channel) => [key, ...channel]);
 
-		callChannelKeybind(channel);
+		callChannelKeybind(channel, key);
 	};
-	const removeFromChannel = (channel: string, item: string) => {
+	const removeFromChannel = (channel: string, key: string) => {
 		setOutput(
 			'channels',
 			channel,
 			produce((channel) => {
-				const idxToRemove = channel.lastIndexOf(item);
+				const idxToRemove = channel.lastIndexOf(key);
 				if (idxToRemove > -1) channel.splice(idxToRemove, 1);
 			})
 		);
 
-		callChannelKeybind(channel);
+		callChannelKeybind(channel, key);
 	};
 	const clearOutputChannels = () => {
 		setOutput('channels', {});
@@ -123,16 +155,28 @@ function useInputs<
 		);
 
 		callKeybind(key, false);
-		if (output.pressed.length === 0) firePost([undefined, 'useInputs']);
+		if (output.pressed.length === 0) firePost({ from: 'useInputs' } as R);
 	};
 
-	const listen = <T extends KeysOrCodes>(
-		inputConfig: InputConfig<T>,
-		keybindConfig?: KeybindConfig<K, C>
+	const listen = (
+		inputConfig: InputConfig<KT>,
+		keybindConfig?: KeybindConfig<KT, typeof inputConfig.channels, R, PR>,
+		stateManagerConfig?: StateManagerConfig<
+			typeof inputConfig.channels,
+			R,
+			PR
+		>
 	) => {
+		setInputConfig(inputConfig);
 		if (keybindConfig) {
 			console.log(`setting config: ${JSON.stringify(keybindConfig)}`);
-			setKeybindConfig(keybindConfig);
+			setKeybindConfig(() => keybindConfig);
+		}
+		if (stateManagerConfig) {
+			console.log(
+				`setting config: ${JSON.stringify(stateManagerConfig)}`
+			);
+			setStateManagerConfig(() => stateManagerConfig);
 		}
 
 		clearOutputChannels();
@@ -140,20 +184,16 @@ function useInputs<
 		const inputChannels = inputConfig.channels;
 		const keyType = inputConfig.options.use;
 
-		const keyToChannelsMap: Record<string, Set<string>> = {};
-		const keyToValuesMap: Record<string, Record<string, Set<string>>> = {};
+		const keyToChannel: Record<string, Set<string>> = {};
+		const keyToVal: Record<string, Record<string, Set<string>>> = {};
 
-		const addToMaps = (input: T, channel: string, key?: string) => {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-			if (!keyToChannelsMap[input]) keyToChannelsMap[input] = new Set();
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-			if (!keyToValuesMap[input]) keyToValuesMap[input] = {};
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-			if (!keyToValuesMap[input][channel])
-				keyToValuesMap[input][channel] = new Set();
+		const addToMaps = (input: KT, channel: string, key?: string) => {
+			if (!keyToChannel[input]) keyToChannel[input] = new Set();
+			if (!keyToVal[input]) keyToVal[input] = {};
+			if (!keyToVal[input][channel]) keyToVal[input][channel] = new Set();
 
-			keyToChannelsMap[input].add(channel);
-			keyToValuesMap[input][channel].add(key ?? input);
+			keyToChannel[input].add(channel);
+			keyToVal[input][channel].add(key ?? input);
 		};
 
 		for (const channel in inputChannels) {
@@ -162,11 +202,11 @@ function useInputs<
 			for (const key in inputChannels[channel]) {
 				if (Array.isArray(inputChannels[channel])) {
 					addToMaps(
-						(inputChannels[channel] as T[])[parseInt(key)],
+						(inputChannels[channel] as KT[])[parseInt(key)],
 						channel
 					);
 				} else {
-					(inputChannels[channel] as Channels<T>)[key].forEach(
+					(inputChannels[channel] as Channels<KT>)[key].forEach(
 						(input) => addToMaps(input, channel, key)
 					);
 				}
@@ -178,9 +218,9 @@ function useInputs<
 
 			return {
 				key,
-				channels: keyToChannelsMap[key],
-				values: keyToValuesMap[key],
-				shouldReturn: !keyToChannelsMap[key],
+				channels: keyToChannel[key],
+				values: keyToVal[key],
+				shouldReturn: !keyToChannel[key],
 			};
 		};
 

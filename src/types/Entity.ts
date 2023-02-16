@@ -12,7 +12,8 @@ import {
 } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { UseInputs } from './Input';
+import useInputs from '../hooks/useInputs';
+import { Codes, KeysOrCodes } from './KeyCodes';
 import { FiniteStateMachine } from './State';
 
 export type Animations = Record<
@@ -51,10 +52,10 @@ export interface LoadModelsConfig {
 	animsExt?: ThreeExtension;
 }
 
-export type CreateCustomEntity = (
+export type CreateCustomEntity<I extends KeysOrCodes = Codes> = (
 	scene: Scene,
 	camera: Camera,
-	inputs?: UseInputs
+	inputs?: ReturnType<typeof useInputs<I>>
 ) => Entity;
 
 export interface Entity {

@@ -3,16 +3,17 @@ import createDemo from '../../hooks/createDemoWorld';
 import createEntity from '../../hooks/createEntity';
 import createState, { CreateStateFns } from '../../hooks/createState';
 import useFiniteStateMachine from '../../hooks/useFiniteStateMachine';
-import useInputs, { validateKeybindConfig } from '../../hooks/useInputs';
+import useInputs from '../../hooks/useInputs';
 import globalStore from '../../global';
 import { CreateCustomEntity, Entity } from '../../types/Entity';
-import { InputConfig } from '../../types/Input';
+import { InputConfig, KeybindConfig } from '../../types/Input';
 import { Codes } from '../../types/KeyCodes';
 import { StateBuilderMap } from '../../types/State';
 import XRay from '../XRay';
 import { clamp } from 'three/src/math/MathUtils';
 import usePathRider from '../../hooks/usePathRider';
 import { Mesh, MeshPhongMaterial, Vector3 } from 'three';
+import { Response, StateManagerConfig } from '../../hooks/useStateManager';
 
 const degToRad = (deg: number) => deg * (Math.PI / 180);
 
@@ -41,13 +42,6 @@ const calcLargestY = (
 
 	return bigHyp * Math.cos(hipAngle + adjAngle);
 };
-
-const hipAngle = degToRad(135);
-const femurLen = 4;
-const kneeAngle = degToRad(135);
-const tibiaLen = 5;
-
-console.log(calcLargestY(hipAngle, femurLen, kneeAngle, tibiaLen));
 
 const namesToMatch = ['idle', 'walk', 'walk-backward', 'run', 'run-backward'];
 const matchTimeOnEnter = (names: string[]): CreateStateFns => ({
@@ -159,12 +153,13 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 		},
 	} satisfies InputConfig<Codes>;
 
-	let lastResult: string[] | undefined;
-	const keybindConfig = validateKeybindConfig<
-		Codes,
-		typeof inputConfig.channels
-	>(
-		{
+	const keybindConfig: KeybindConfig<
+		Codes, //? 'keys' keys
+		Partial<typeof inputConfig.channels>, //? 'channels' keys
+		Response, //? 'channels' fns return type
+		string //? '_post' fn param type & state manager fn return type
+	> = {
+		keys: {
 			KeyW: (pressed) =>
 				player.setState('actions', 'move', 'forward', pressed),
 			KeyS: (pressed) =>
@@ -193,50 +188,59 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 			ShiftLeft: (pressed) =>
 				player.setState('actions', 'move', 'sprinting', pressed),
 		},
-		{
-			move: () => {
-				const move = player.state.actions.move;
-				console.log(move.forward, move.backward);
-				if (
-					inputs!.output.channels.move.length === 0 ||
-					(move.forward && move.backward)
-				)
-					return 'idle';
+		channels: {
+			move: (_, head) => {
+				const { forward, backward } = player.state.actions.move;
+
+				if (!head || forward === backward) return 'idle';
 
 				const isRunning =
 					inputs!.output.channels.mods.includes('ShiftLeft');
-
-				if (move.forward) return isRunning ? 'run' : 'walk';
-				if (move.backward)
+				if (forward) return isRunning ? 'run' : 'walk';
+				if (backward)
 					return isRunning ? 'run-backward' : 'walk-backward';
 			},
-			jump: () => 'jump',
+			jump: () => undefined,
 			dance: () => 'no-op',
-			mods: () => undefined,
-			qwop: () => 'no-op',
-			_post: (result, from) => {
-				//! create a thing to handle no-op, locked, unlock, etc.
-				//! for more granular state control
-				let _result = result;
-				if (
-					lastResult &&
-					from === 'useInputs' &&
-					lastResult[0] === 'no-op'
-				) {
-					_result = 'no-op';
-				}
-				lastResult = [result as string, from as string];
-
-				if (_result === 'no-op') return;
-
-				return _result
-					? player.stateMachine()?.changeState(_result as string)
-					: player.toDefaultState();
+			qwop: () => {
+				'no-op';
 			},
-		}
-	);
+		},
+		post: (result) => {
+			//! create a thing to handle no-op, locked, unlock, etc.
+			//! for more granular state control
+			// let _result = result;
+			// if (
+			// 	lastResult &&
+			// 	from === 'useInputs' &&
+			// 	lastResult[0] === 'no-op'
+			// ) {
+			// 	_result = 'no-op';
+			// }
+			// lastResult = [result as string, from as string];
 
-	inputs?.listen(inputConfig, keybindConfig); //! ignore error
+			if (result === 'no-op') return;
+			console.log(result);
+			return result
+				? player.stateMachine()?.changeState(result as string)
+				: player.toDefaultState();
+		},
+	};
+
+	//? fnProps: [curr, prev, mostRecent, prevMostRecent]
+	const stateManagerConfig: StateManagerConfig<
+		typeof inputConfig.channels, //? keys
+		Response, //? fn props
+		string //? return type
+	> = {
+		// move: ([{ state }]) => state.message,
+		// jump: ([{ state }]) => state.message,
+		// dance: ([{ state }]) => state.message,
+		// mods: ([{ state }]) => state.message,
+		// qwop: ([{ state }]) => state.message,
+	};
+
+	inputs?.listen(inputConfig, keybindConfig, stateManagerConfig);
 
 	player.loadModelAndAnims({
 		parentDir: 'qwop',

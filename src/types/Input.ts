@@ -1,6 +1,5 @@
-import { Setter } from 'solid-js';
-import { SetStoreFunction } from 'solid-js/store';
-import { KeysOrCodes } from './KeyCodes';
+import { Response } from '../hooks/useStateManager';
+import { Codes, KeysOrCodes } from './KeyCodes';
 
 export type Channels<T = string> = Record<string, T[]>;
 export type InputChannels<T extends KeysOrCodes> = Record<
@@ -15,71 +14,26 @@ export interface InputConfig<T extends KeysOrCodes> {
 	options: InputOptions;
 }
 
-export interface Output {
-	channels: Channels;
-	pressed: string[];
-}
-
-export interface UseInputs<
-	K extends (...args: any) => any = KeybindFn,
-	C extends (...args: any) => any = ChannelKeybindFn
-> {
-	output: Output;
-	listen: <T extends KeysOrCodes>(
-		inputConfig: InputConfig<T>,
-		keybindConfig?: KeybindConfig<K, C>
-	) => void;
-	setKeybindConfig: Setter<Partial<KeybindConfig<K, C>>>;
-}
-
-export type KeybindFn = (pressed: boolean) => void;
-export type ChannelKeybindFn = () => string | string[] | undefined;
-
-export type Keybinds<F extends (...args: any) => any> = Record<string, F>;
-export type PostFire<F extends (...args: any) => any> = Record<
-	'_post',
-	(result: ReturnType<F>, from?: string) => void
->;
-export type ChannelKeybinds<F extends (...args: any) => any> = ValidConfig<
-	keyof Channels,
-	F
-> &
-	PostFire<F>;
-
+export type KeyFn<R> = (pressed: boolean) => R | void;
+export type ChannelFn<R> = (key: string, head: string) => R | string | void;
+// export type PostFire<R> = Record<'_post', (result?: R) => void>;
 export interface KeybindOptions {
 	alwaysPassInput?: boolean;
 	useModsChannel?: boolean;
 }
 export interface KeybindConfig<
-	K extends (...args: any) => any = KeybindFn,
-	C extends (...args: any) => any = ChannelKeybindFn
+	KT extends KeysOrCodes = Codes, //? key names
+	CT extends Record<string, any> = InputChannels<KT>, //? channel names
+	R = Response, //? key/channel fn return type
+	PR = string //? post fire fn params type / state manager fn return type
 > {
-	keys: Keybinds<K>;
-	channels: ChannelKeybinds<C>;
+	keys: Partial<Record<KT, KeyFn<PR>>>;
+	channels: Partial<Record<keyof CT, ChannelFn<R>>>; // & PostFire<PR>;
+	post?: (result?: PR) => void;
 	options?: KeybindOptions;
 }
 
-export type Indexer = string | number | symbol;
-
-export type KBOmit<T> = T;
-export type KBNoMods = string[];
-export type KBPartial = string[][];
-export type KBPostFire = string[][][];
-export type ValidConfig<T extends Indexer, F> = Record<T, F>;
-//! ignore the errors, they're lying
-//! legitimately working as intended
-export type KBCValidator<
-	C extends string | number | symbol,
-	T extends Indexer,
-	F extends (...args: any) => any
-> = C extends KBPostFire
-	? ValidConfig<T, F> & PostFire<F>
-	: C extends KBPartial
-	? Partial<ValidConfig<T, F>>
-	: C extends KBNoMods
-	? Omit<ValidConfig<T, F>, 'mods'>
-	: C extends KBOmit //! MUST BE THE LAST TERNARY
-	? Omit<ValidConfig<T, F>, C>
-	: ValidConfig<T, F>;
-
-export type KBValidator<T extends Indexer, F> = Partial<ValidConfig<T, F>>;
+export interface Output {
+	channels: Channels;
+	pressed: string[];
+}
