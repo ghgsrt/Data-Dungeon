@@ -3,6 +3,7 @@ import GameWindow from './components/QWOP/GameWindow';
 import InputExample from './components/InputExample';
 import Example from './components/Example';
 import globalStore from './global';
+import Practice from './components/practice/Practice';
 
 function App() {
 	const [currentDemoTitle, setCurrentDemoTitle] = createSignal<string>('');
@@ -19,6 +20,7 @@ function App() {
 		'useInput Example': <InputExample />,
 		// Model: <Model />,
 		QWOP: <GameWindow />,
+		Practice: <Practice />,
 	};
 
 	return (
