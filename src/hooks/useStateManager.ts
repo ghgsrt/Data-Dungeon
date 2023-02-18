@@ -35,7 +35,7 @@ export type StateManagerFnProps<P extends StateObject = StateObject> = Tuple<
 	4
 >;
 export type StateManagerConfig<C, P extends StateObject, R> = Partial<
-	Record<keyof C, (props: StateManagerFnProps<P>) => R>
+	Record<keyof C, (...props: StateManagerFnProps<P>) => R>
 >;
 
 function useStateManager<T extends StateObject>(channels: string[]) {

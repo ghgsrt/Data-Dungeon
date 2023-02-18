@@ -1,28 +1,12 @@
 import { createEffect, createSignal, onCleanup } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { AnimationMixer, AnimationAction, Event } from 'three';
 import { Entity } from '../types/Entity';
-import {
-	StateBuilderMap,
-	FiniteStateMachine,
-	State,
-	TestFiniteStateMachine,
-} from '../types/State';
+import { StateBuilderMap, FiniteStateMachine, State } from '../types/State';
 
-function useFiniteStateMachine(
-	entity: string,
-	defaultStates?: Record<string, number>
-): TestFiniteStateMachine;
-
-function useFiniteStateMachine(
+function useAnimStateMachine(
 	entity: Entity,
 	defaultStates?: StateBuilderMap
-): FiniteStateMachine;
-
-function useFiniteStateMachine(
-	stateBuilderProp: any,
-	defaultStates?: any
-): any {
+): FiniteStateMachine {
 	const [states, setStates] = createStore<StateBuilderMap>(
 		defaultStates ?? {}
 	);
@@ -44,9 +28,9 @@ function useFiniteStateMachine(
 		name,
 		callExit = true
 	) => {
-		if (!stateBuilderProp.readyForStateChange()) return;
+		if (!entity.readyForStateChange()) return;
 
-		const state = states[name]?.(stateBuilderProp);
+		const state = states[name]?.(entity);
 		if (!state) return;
 
 		const prevState = currentState();
@@ -62,9 +46,7 @@ function useFiniteStateMachine(
 	};
 
 	const update: FiniteStateMachine['update'] = (timeElapsed) => {
-		if (!currentState()) return;
-
-		currentState()!.update(timeElapsed);
+		currentState()?.update(timeElapsed);
 	};
 
 	onCleanup(() => currentState()?.exit());
@@ -79,4 +61,4 @@ function useFiniteStateMachine(
 	};
 }
 
-export default useFiniteStateMachine;
+export default useAnimStateMachine;

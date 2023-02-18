@@ -48,7 +48,7 @@ export interface LoadModelsConfig {
 	modelExt: ThreeExtension;
 	animsDir?: string;
 	animNames?: string[];
-	additAnimNames?: string[]; //! not implemented
+	additAnimNames?: string[];
 	animsExt?: ThreeExtension;
 }
 
@@ -117,7 +117,7 @@ export interface Entity {
 	onUpdate: (fn: Entity['update']) => void;
 	readyForStateChange: () => boolean;
 	toDefaultState: () => void;
-	toggleAction: (
+	toggleAdditAction: (
 		name: string,
 		weight: number,
 		pressed: boolean,

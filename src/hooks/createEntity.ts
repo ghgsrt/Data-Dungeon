@@ -118,7 +118,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 
 	const applyShadows = (c: Object3D) => (c.castShadow = shadow());
 
-	const toggleAction: Entity['toggleAction'] = (
+	const toggleAdditAction: Entity['toggleAdditAction'] = (
 		name,
 		weight,
 		pressed,
@@ -323,10 +323,12 @@ function createEntity(entityConfig: EntityConfig): Entity {
 
 		if (sprinting) acc.multiplyScalar(5.0);
 
-		if (forward) velocity().z += acc.z * timeInSeconds;
-		if (backward) velocity().z -= (acc.z / 1.85) * timeInSeconds;
+		if (forward !== backward) {
+			if (forward) velocity().z += acc.z * timeInSeconds;
+			if (backward) velocity().z -= (acc.z / 1.85) * timeInSeconds;
+		}
 		//! scuffed behavior. obey the channels damnit
-		if (left || right) {
+		if ((left || right) && left !== right) {
 			_A.set(0, 1, 0);
 			_Q.setFromAxisAngle(
 				_A,
@@ -431,7 +433,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		onUpdate,
 		readyForStateChange,
 		toDefaultState,
-		toggleAction,
+		toggleAdditAction: toggleAdditAction,
 		loadModelAndAnims,
 		update,
 	};

@@ -2,7 +2,7 @@ import { createEffect, createSignal, onMount } from 'solid-js';
 import createDemo from '../../hooks/createDemoWorld';
 import createEntity from '../../hooks/createEntity';
 import createState, { CreateStateFns } from '../../hooks/createState';
-import useFiniteStateMachine from '../../hooks/useFiniteStateMachine';
+import useAnimStateMachine from '../../hooks/useFiniteStateMachine';
 import useInputs from '../../hooks/useInputs';
 import globalStore from '../../global';
 import { CreateCustomEntity, Entity } from '../../types/Entity';
@@ -101,34 +101,23 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 		},
 	});
 
-	const fsm: StateBuilderMap = {
-		idle: createState('idle'),
-		walk: createState('walk', matchTimeOnEnter(namesToMatch)),
-		'walk-backward': createState(
+	player.loadModelAndAnims({
+		parentDir: 'qwop',
+		modelName: 'character',
+		modelExt: 'fbx',
+		animNames: [
+			'idle',
+			'walk',
 			'walk-backward',
-			matchTimeOnEnter(namesToMatch)
-		),
-		run: createState('run', matchTimeOnEnter(namesToMatch)),
-		'run-backward': createState(
+			'run',
 			'run-backward',
-			matchTimeOnEnter(namesToMatch)
-		),
-		jump: createState('jump'),
-		dance: createState('dance'),
-		'falling-down': createState('falling-down', {
-			update: ({ changeState }) => {
-				if (player.state.timers['falling-down'] > 0.9)
-					changeState('down');
-			},
-		}),
-		down: createState('down', {
-			enter: ({ action }) => {
-				player.target()?.rotateY(-Math.PI / 2);
-				action.play();
-			},
-			cleanup: () => player.target()?.rotateY(Math.PI / 2),
-		}),
-	};
+			'jump',
+			'dance',
+			'falling-down',
+			'down',
+		],
+		additAnimNames: ['walk-injured'],
+	});
 
 	const inputConfig = {
 		channels: {
@@ -156,8 +145,8 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 	const keybindConfig: KeybindConfig<
 		Codes, //? 'keys' keys
 		Partial<typeof inputConfig.channels>, //? 'channels' keys
-		Response, //? 'channels' fns return type
-		string //? '_post' fn param type & state manager fn return type
+		string, //? '_post' fn param type & state manager fn return type
+		Response //? 'channels' fns return type if using state manager
 	> = {
 		keys: {
 			KeyW: (pressed) =>
@@ -166,22 +155,22 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 				player.setState('actions', 'move', 'backward', pressed),
 			// KeyF: (pressed) =>
 			// 	player.toggleAction('walk-injured', 0.5, pressed),
-			// KeyE: (pressed) =>
-			// 	player.setState('limbControls', 'RightUpLegBackward', pressed),
-			// KeyR: (pressed) =>
-			// 	player.setState('limbControls', 'RightUpLegForward', pressed),
-			// KeyT: (pressed) =>
-			// 	player.setState('limbControls', 'LeftUpLegBackward', pressed),
-			// KeyY: (pressed) =>
-			// 	player.setState('limbControls', 'LeftUpLegForward', pressed),
-			KeyU: (pressed) =>
-				player.setState('limbControls', 'RightLegBackward', pressed),
-			KeyI: (pressed) =>
-				player.setState('limbControls', 'RightLegForward', pressed),
-			KeyO: (pressed) =>
-				player.setState('limbControls', 'LeftLegBackward', pressed),
-			KeyP: (pressed) =>
-				player.setState('limbControls', 'LeftLegForward', pressed),
+			KeyE: (pressed) =>
+				player.setState('limbControls', 'RightUpLegBackward', pressed),
+			KeyR: (pressed) =>
+				player.setState('limbControls', 'RightUpLegForward', pressed),
+			KeyT: (pressed) =>
+				player.setState('limbControls', 'LeftUpLegBackward', pressed),
+			KeyY: (pressed) =>
+				player.setState('limbControls', 'LeftUpLegForward', pressed),
+			// KeyU: (pressed) =>
+			// 	player.setState('limbControls', 'RightLegBackward', pressed),
+			// KeyI: (pressed) =>
+			// 	player.setState('limbControls', 'RightLegForward', pressed),
+			// KeyO: (pressed) =>
+			// 	player.setState('limbControls', 'LeftLegBackward', pressed),
+			// KeyP: (pressed) =>
+			// 	player.setState('limbControls', 'LeftLegForward', pressed),
 			KeyG: (pressed) => {
 				if (pressed) player.stateMachine()?.changeState('falling-down');
 			},
@@ -200,6 +189,7 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 				if (backward)
 					return isRunning ? 'run-backward' : 'walk-backward';
 			},
+			mods: (key) => (key === 'ShiftLeft' ? 'move' : 'no-op'),
 			jump: () => undefined,
 			dance: () => 'no-op',
 			qwop: () => {
@@ -233,34 +223,45 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 		Response, //? fn props
 		string //? return type
 	> = {
-		// move: ([{ state }]) => state.message,
-		// jump: ([{ state }]) => state.message,
-		// dance: ([{ state }]) => state.message,
-		// mods: ([{ state }]) => state.message,
-		// qwop: ([{ state }]) => state.message,
+		// move: ({ state }) => state.message,
+		// jump: ({ state }) => state.message,
+		// dance: ({ state }) => state.message,
+		// mods: ({ state }) => state.message,
+		// qwop: ({ state }) => state.message,
 	};
 
 	inputs?.listen(inputConfig, keybindConfig, stateManagerConfig);
 
-	player.loadModelAndAnims({
-		parentDir: 'qwop',
-		modelName: 'character',
-		modelExt: 'fbx',
-		animNames: [
-			'idle',
-			'walk',
+	const fsm: StateBuilderMap = {
+		idle: createState('idle'),
+		walk: createState('walk', matchTimeOnEnter(namesToMatch)),
+		'walk-backward': createState(
 			'walk-backward',
-			'run',
+			matchTimeOnEnter(namesToMatch)
+		),
+		run: createState('run', matchTimeOnEnter(namesToMatch)),
+		'run-backward': createState(
 			'run-backward',
-			'jump',
-			'dance',
-			'falling-down',
-			'down',
-		],
-		additAnimNames: ['walk-injured'],
-	});
+			matchTimeOnEnter(namesToMatch)
+		),
+		jump: createState('jump'),
+		dance: createState('dance'),
+		'falling-down': createState('falling-down', {
+			update: ({ changeState }) => {
+				if (player.state.timers['falling-down'] > 0.9)
+					changeState('down');
+			},
+		}),
+		down: createState('down', {
+			enter: ({ action }) => {
+				player.target()?.rotateY(-Math.PI / 2);
+				action.play();
+			},
+			cleanup: () => player.target()?.rotateY(Math.PI / 2),
+		}),
+	};
 
-	player.setStateMachine(useFiniteStateMachine(player, fsm));
+	player.setStateMachine(useAnimStateMachine(player, fsm));
 
 	return player;
 };
@@ -288,11 +289,12 @@ function GameWindow() {
 
 		const updatePathRider = () => {
 			let delta: number;
-			if (player.state.actions.move.forward) delta = 1;
-			else if (player.state.actions.move.backward) delta = -1;
-			else return;
+			const { forward, backward, sprinting } = player.state.actions.move;
 
-			if (player.state.actions.move.sprinting) delta *= 5;
+			if (forward === backward) return;
+			delta = forward ? 1 : -1;
+
+			if (sprinting) delta *= 5;
 
 			player.setState('pathRider', 'input', (input: number) =>
 				clamp(input + delta, 0, player.state.pathRider.max)
@@ -456,15 +458,6 @@ function GameWindow() {
 			updatePlayerY();
 		});
 
-		createEffect(() => {
-			if (player.modelReady()) {
-				console.log(player.target()?.getWorldPosition(new Vector3()));
-				// player.target()?.traverse((child) => {
-				// 	console.log(child.name);
-				// });
-			}
-		});
-
 		// const demo2 = createDemo(xRay);
 		// player2 = createQWOPPlayer(demo2.scene, demo2.camera);
 		// demo2.setControls(player2);
@@ -508,7 +501,7 @@ function GameWindow() {
 	const toggleBeans = () => {
 		if (player?.readyForStateChange()) {
 			console.log(injured);
-			player.toggleAction('walk-injured', 0.5, injured, 0.5);
+			player.toggleAdditAction('walk-injured', 0.5, injured, 0.5);
 			injured = !injured;
 		}
 	};

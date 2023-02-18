@@ -24,8 +24,8 @@ export interface KeybindOptions {
 export interface KeybindConfig<
 	KT extends KeysOrCodes = Codes, //? key names
 	CT extends Record<string, any> = InputChannels<KT>, //? channel names
-	R = Response, //? key/channel fn return type
-	PR = string //? post fire fn params type / state manager fn return type
+	PR = string, //? post fire fn params type / state manager fn return type
+	R = Response //? key/channel fn return type if using state manager
 > {
 	keys: Partial<Record<KT, KeyFn<PR>>>;
 	channels: Partial<Record<keyof CT, ChannelFn<R>>>; // & PostFire<PR>;

@@ -1,7 +1,7 @@
 import { createStore, produce } from 'solid-js/store';
 import useEventListener from './useEventListener';
 import { Codes, KeysOrCodes } from '../types/KeyCodes';
-import { createEffect, createSignal } from 'solid-js';
+import { createEffect, createSignal, onCleanup } from 'solid-js';
 import {
 	KeybindConfig,
 	Output,
@@ -20,10 +20,10 @@ import useStateManager, {
 //! SHOULD I TREAT NO CAPS AND CAPS THE EXACT SAME WHEN USE KEY????????
 function useInputs<
 	KT extends KeysOrCodes = Codes,
-	R extends StateObject = Response,
-	PR = string
+	PR = string,
+	R extends StateObject = Response
 >(
-	keybindConfig?: KeybindConfig<KT, InputChannels<KT>, R, PR>,
+	keybindConfig?: KeybindConfig<KT, InputChannels<KT>, PR, R>,
 	stateManagerConfig?: StateManagerConfig<InputChannels<KT>, R, PR>
 ) {
 	const [_keybindConfig, setKeybindConfig] =
@@ -54,8 +54,6 @@ function useInputs<
 		let result = _result;
 		if (_stateManagerConfig() && _result && channel) {
 			const stateMachine = stateManager.stateMachines[channel];
-			stateManager.changeState(_result as R);
-			stateMachine.changeState(_result as R);
 
 			const props = [
 				stateMachine.state(),
@@ -64,8 +62,11 @@ function useInputs<
 				stateManager.prevState(),
 			] as StateManagerFnProps<R>;
 
-			result = (_stateManagerConfig()![channel]?.(props) ??
+			result = (_stateManagerConfig()![channel]?.(...props) ??
 				(result as R).message) as PR;
+
+			stateManager.changeState(_result as R);
+			stateMachine.changeState(_result as R);
 		}
 
 		if (typeof result !== 'string') result = (result as R).message as PR;
@@ -79,35 +80,29 @@ function useInputs<
 		let res = (_keybindConfig()!.keys as Record<string, KeyFn<PR>>)?.[
 			key
 		]?.(pressed);
-		// if (res === undefined || typeof res === 'string')
-		// {
-		// 	res = { message: res } as R
-		// }
+
 		if (res !== undefined) firePost(res);
 	};
 	const callChannelKeybind = (channel: string, key: string): void => {
-		if (!_keybindConfig()) return;
-
-		//! might need different prop passed for key
-		// if (channel === 'mods') return callChannelKeybind('move', key);
+		if (!_keybindConfig() || !channel) return;
 
 		let res = _keybindConfig()!.channels?.[channel]?.(
 			key,
 			output.channels[channel][0]
 		);
+		if (res === 'no-op') return;
+
+		if (channel === 'mods' && !_keybindConfig()!.options?.useModsChannel)
+			return callChannelKeybind(res as string, key);
+
 		if (res === undefined || typeof res === 'string')
 			res = {
-				message: res ? res : channel,
+				message: res ?? channel,
 				key,
 				channelHead: output.channels[channel][0],
 			} as R;
 
-		if (
-			// output.channels[channel].length > 0 &&
-			channel !== 'mods' ||
-			_keybindConfig()!.options?.useModsChannel
-		)
-			firePost(res, channel);
+		firePost(res, channel);
 	};
 
 	const addChannel = (channel: string) => {
@@ -129,6 +124,8 @@ function useInputs<
 		);
 
 		callChannelKeybind(channel, key);
+		if (output.pressed.length === 0)
+			firePost({ message: 'toDefault', from: 'useInputs' } as R, channel);
 	};
 	const clearOutputChannels = () => {
 		setOutput('channels', {});
@@ -155,12 +152,11 @@ function useInputs<
 		);
 
 		callKeybind(key, false);
-		if (output.pressed.length === 0) firePost({ from: 'useInputs' } as R);
 	};
 
 	const listen = (
 		inputConfig: InputConfig<KT>,
-		keybindConfig?: KeybindConfig<KT, typeof inputConfig.channels, R, PR>,
+		keybindConfig?: KeybindConfig<KT, typeof inputConfig.channels, PR, R>,
 		stateManagerConfig?: StateManagerConfig<
 			typeof inputConfig.channels,
 			R,
@@ -257,6 +253,8 @@ function useInputs<
 		unsubList.push(useEventListener('keydown', handleKeyDown).unsubscribe);
 		unsubList.push(useEventListener('keyup', handleKeyUp).unsubscribe);
 	};
+
+	onCleanup(() => unsubList.forEach((unsub) => unsub()));
 
 	return { output, listen, setKeybindConfig };
 }

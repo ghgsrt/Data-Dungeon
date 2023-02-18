@@ -10,34 +10,34 @@ import { Codes } from '../../types/KeyCodes';
 import { StateBuilderMap } from '../../types/State';
 import globalStore from '../../global';
 
-type Props = {};
-
+const namesToMatch = ['idle', 'walk', 'walk-backward', 'run', 'run-backward'];
+const matchTimeOnEnter = (names: string[]): CreateStateFns => ({
+	enter: ({ action, setTimeFromRatio }) => {
+		setTimeFromRatio(names);
+		action.play();
+	},
+});
 const createTestPlayer: CreateCustomEntity = (scene, camera, inputs) => {
-	const namesToMatch = [
-		'idle',
-		'walk',
-		'walk-backward',
-		'run',
-		'run-backward',
-	];
-	const matchTimeOnEnter = (names: string[]): CreateStateFns => ({
-		enter: ({ action, setTimeFromRatio }) => {
-			setTimeFromRatio(names);
-			action.play();
-		},
-	});
-
 	const testPlayer = createEntity({
 		scene,
 		camera,
 		// just variables tied to this entity
-		state: {},
+		// state: {},
+	});
+
+	testPlayer.loadModelAndAnims({
+		parentDir: 'qwop',
+		modelName: 'character',
+		modelExt: 'fbx',
+		// these are file names in the specified parent dir under animations/file extension
+		animNames: ['idle', 'walk', 'walk-backward', 'run', 'run-backward'],
 	});
 
 	const inputConfig = {
 		channels: {
 			// channels prevent grouped keys from registering at the same time
 			move: ['KeyW', 'KeyA', 'KeyS', 'KeyD'],
+			mods: ['ShiftLeft'],
 		},
 		options: {
 			use: 'code',
@@ -62,19 +62,20 @@ const createTestPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 		channels: {
 			// (key, head of channel)
 			move: (_, head) => {
-				const { forward, backward } = testPlayer.state.actions.move;
+				const { forward, backward, sprinting } =
+					testPlayer.state.actions.move;
 
 				if (!head || forward === backward) return 'idle';
 
-				const isRunning =
-					inputs!.output.channels.mods.includes('ShiftLeft');
+				const isRunning = sprinting;
 				if (forward) return isRunning ? 'run' : 'walk';
 				if (backward)
 					return isRunning ? 'run-backward' : 'walk-backward';
 			}, // move
+			mods: (key) => (key === 'ShiftLeft' ? 'move' : 'no-op'),
 		}, // channels
 		post: (result) => {
-			if (result === 'no-op') return;
+			// if (result === 'no-op') return;
 			console.log(result);
 			return result
 				? testPlayer.stateMachine()?.changeState(result as string)
@@ -82,13 +83,7 @@ const createTestPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 		}, // post
 	}; // keybindConfig
 
-	testPlayer.loadModelAndAnims({
-		parentDir: 'qwop',
-		modelName: 'character',
-		modelExt: 'fbx',
-		// these are file names in the specified parent dir under animations/file extension
-		animNames: ['idle', 'walk', 'walk-backward', 'run', 'run-backward'],
-	});
+	inputs?.listen(inputConfig, keybindConfig);
 
 	const fsm: StateBuilderMap = {
 		// keys must match animNames defined above
@@ -111,7 +106,7 @@ const createTestPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 };
 
 let container: HTMLDivElement;
-export default function Practice({}: Props) {
+function Practice() {
 	const { activeComponent } = globalStore;
 	const inputs = useInputs();
 
@@ -135,3 +130,5 @@ export default function Practice({}: Props) {
 		</div>
 	);
 }
+
+export default Practice;
