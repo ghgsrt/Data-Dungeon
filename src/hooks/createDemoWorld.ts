@@ -19,6 +19,7 @@ import {
 	MeshStandardMaterial,
 	CubeTextureLoader,
 	Vector3,
+	Camera,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Entity } from '../types/Entity';
@@ -38,6 +39,14 @@ function createDemo(container: HTMLDivElement) {
 	const [prevRAF, setPrevRAF] = createSignal<number | null>(null);
 	const [controls, setControls] = createSignal<Entity>();
 	const [orbControls, setOrbControls] = createSignal<OrbitControls>();
+	const [plane, setPlane] = createSignal(
+		new Mesh(
+			new PlaneGeometry(100, 100, 10, 10),
+			new MeshStandardMaterial({
+				color: 0x808080,
+			})
+		)
+	);
 
 	modifyMutable(
 		renderer,
@@ -84,15 +93,9 @@ function createDemo(container: HTMLDivElement) {
 	dirLight.shadow.camera.bottom = -50;
 	const ambLight = new AmbientLight(0xffffff, 0.25);
 
-	const plane = new Mesh(
-		new PlaneGeometry(100, 100, 10, 10),
-		new MeshStandardMaterial({
-			color: 0x808080,
-		})
-	);
-	plane.castShadow = false;
-	plane.receiveShadow = true;
-	plane.rotation.x = -Math.PI / 2;
+	plane().castShadow = false;
+	plane().receiveShadow = true;
+	plane().rotation.x = -Math.PI / 2;
 
 	const loader = new CubeTextureLoader();
 	const texture = loader.load([
@@ -110,10 +113,19 @@ function createDemo(container: HTMLDivElement) {
 		produce((_scene) => {
 			_scene.add(dirLight);
 			_scene.add(ambLight);
-			_scene.add(plane);
+			_scene.add(plane());
 			_scene.background = texture;
 		})
 	);
+
+	createEffect(() => {
+		modifyMutable(
+			scene,
+			produce((_scene) => {
+				_scene.add(plane());
+			})
+		);
+	});
 
 	const loadAnimatedModel = () => {};
 
@@ -155,6 +167,18 @@ function createDemo(container: HTMLDivElement) {
 	// 	);
 	// });
 
+	const updateCamera = (callback: (camera: Camera) => void) => {
+		modifyMutable(
+			camera,
+			produce((_camera) => {
+				callback(camera);
+			})
+		);
+	};
+
+	const [_update, _setUpdate] = createSignal<(timeElapsed: number) => void>();
+	const onUpdate = (fn: (timeElapsed: number) => void) =>
+		_setUpdate((_) => fn);
 	const RAF = () => {
 		requestAnimationFrame((t) => {
 			if (prevRAF() === null) setPrevRAF(t);
@@ -164,6 +188,7 @@ function createDemo(container: HTMLDivElement) {
 			renderer.render(scene, camera);
 
 			step(t - (prevRAF() ?? 0));
+			if (_update()) _update()!(t);
 			setPrevRAF(t);
 		});
 	};
@@ -193,12 +218,16 @@ function createDemo(container: HTMLDivElement) {
 		scene,
 		mixers,
 		orbControls,
+		plane,
+		updateCamera,
+		onUpdate,
 		prevRAF,
 		controls,
 		setMixers,
 		setPrevRAF,
 		setControls,
 		setOrbControls,
+		setPlane,
 		onWindowResize,
 	};
 }

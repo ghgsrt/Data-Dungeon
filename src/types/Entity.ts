@@ -26,7 +26,7 @@ export type Animations = Record<
 
 export interface EOptionsConfig {
 	acceleration: Vector3;
-	decceleration: Vector3;
+	deceleration: Vector3;
 	velocity: Vector3;
 	shadow: boolean;
 	scale: number;
@@ -35,6 +35,7 @@ export interface EOptionsConfig {
 export interface EntityConfig {
 	scene: Scene;
 	camera: Camera;
+	load?: LoadModelsConfig;
 	state?: Record<string, any>;
 	options?: Partial<EOptionsConfig>;
 }
@@ -65,6 +66,7 @@ export interface Entity {
 	modelDir: Accessor<string>;
 	modelName: Accessor<string>;
 	modelExt: Accessor<string>;
+	getModelPath: () => string;
 	modelReady: Accessor<boolean>;
 
 	animsDir: Accessor<string>;
@@ -80,7 +82,7 @@ export interface Entity {
 	shadow: Accessor<boolean>;
 	velocity: Accessor<Vector3>;
 	acceleration: Accessor<Vector3>;
-	decceleration: Accessor<Vector3>;
+	deceleration: Accessor<Vector3>;
 
 	target: Accessor<Group | undefined>;
 	skellyboi: Accessor<SkeletonHelper | undefined>;
@@ -107,7 +109,7 @@ export interface Entity {
 	setShadow: Setter<boolean>;
 	setVelocity: Setter<Vector3>;
 	setAcceleration: Setter<Vector3>;
-	setDecceleration: Setter<Vector3>;
+	setDeceleration: Setter<Vector3>;
 
 	setTarget: Setter<Group>;
 	setManager: SetStoreFunction<LoadingManager>;

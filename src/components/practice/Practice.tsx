@@ -9,6 +9,8 @@ import { InputConfig, KeybindConfig } from '../../types/Input';
 import { Codes } from '../../types/KeyCodes';
 import { StateBuilderMap } from '../../types/State';
 import globalStore from '../../global';
+import XRay from '../XRay';
+import { Color, Mesh, MeshPhongMaterial } from 'three';
 
 const namesToMatch = ['idle', 'walk', 'walk-backward', 'run', 'run-backward'];
 const matchTimeOnEnter = (names: string[]): CreateStateFns => ({
@@ -105,6 +107,7 @@ const createTestPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 	return testPlayer;
 };
 
+let xRay: HTMLDivElement;
 let container: HTMLDivElement;
 function Practice() {
 	const { activeComponent } = globalStore;
@@ -115,18 +118,42 @@ function Practice() {
 		const player = createTestPlayer(demo.scene, demo.camera, inputs);
 		demo.setControls(player);
 
+		const demo2 = createDemo(xRay);
+		const player2 = createTestPlayer(demo2.scene, demo2.camera, inputs);
+		demo2.setControls(player2);
+
 		createEffect(() => {
-			if (activeComponent() === 'Practice') {
+			if (player2?.modelReady()) {
+				// player.skellyboi()?.bones.forEach((bone) => {
+				// 	console.log(JSON.stringify(bone));
+				// });
+
+				player2.target()?.traverse((child) => {
+					(child as Mesh).material = new MeshPhongMaterial({
+						color: child.name.includes('Beta_Surface')
+							? 0xff000077
+							: 0x55000099,
+						shininess: 10,
+					});
+				});
+			}
+		});
+		
+		createEffect(() => {
+			if (activeComponent() === 'XRay') {
 				demo.onWindowResize();
-				// demo2.onWindowResize();
+				demo2.onWindowResize();
 			}
 		});
 	});
 
 	return (
 		<div class="relative h-full w-full">
-			<div ref={container} class="z-0 h-5/6 w-full" />
-			<div class="flex h-1/6 w-full items-center bg-black"></div>
+			<div ref={container} class="z-0 h-full w-full" />
+			<XRay name="QWOP" reference={container}>
+				<div ref={xRay} class="absolute" />
+			</XRay>
+			{/* <div class="flex h-1/6 w-full items-center bg-black"></div> */}
 		</div>
 	);
 }

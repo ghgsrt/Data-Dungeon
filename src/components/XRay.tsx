@@ -19,7 +19,7 @@ function XRay({ name, reference, children }: XRayProps) {
 		<div
 			id="xRayMachine"
 			ref={xRayMachine}
-			class=" absolute top-0 left-0 h-1/5 w-1/5 cursor-pointer overflow-hidden border border-black pt-10"
+			class=" absolute top-0 left-0 h-1/4 w-1/4 cursor-pointer overflow-hidden border border-black pt-10"
 		>
 			{children}
 		</div>

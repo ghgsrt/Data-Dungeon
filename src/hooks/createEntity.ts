@@ -13,9 +13,11 @@ import {
 	LoadingManager,
 	Quaternion,
 	AnimationUtils,
-	AnimationBlendMode,
 	AdditiveAnimationBlendMode,
 	SkeletonHelper,
+	Box3,
+	Box3Helper,
+	Color,
 } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
@@ -35,7 +37,7 @@ const defaultOptions: Record<string, EOCVals> = {
 	shadow: true,
 	velocity: new Vector3(0, 0, 0),
 	acceleration: new Vector3(2, 0.25, 80.0),
-	decceleration: new Vector3(-0.0005, -0.0001, -5.0),
+	deceleration: new Vector3(-0.0005, -0.0001, -5.0),
 } satisfies EOptionsConfig;
 
 const reconcileOptions = (options?: Partial<EOptionsConfig>) => {
@@ -73,9 +75,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 	const [shadow, setShadow] = createSignal(options.shadow);
 	const [velocity, setVelocity] = createSignal(options.velocity);
 	const [acceleration, setAcceleration] = createSignal(options.acceleration);
-	const [decceleration, setDecceleration] = createSignal(
-		options.decceleration
-	);
+	const [deceleration, setDeceleration] = createSignal(options.deceleration);
 
 	const [target, setTarget] = createSignal<Group>();
 	const [skellyboi, setSkellyboi] = createSignal<SkeletonHelper>();
@@ -101,9 +101,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 	//! Pass a callback into this instead of changing update()
 	//* e.g., entity.onUpdate(() => { ... })
 	const [_update, _setUpdate] = createSignal<Entity['update']>();
-	const onUpdate: Entity['onUpdate'] = (fn) => {
-		_setUpdate((_) => fn);
-	};
+	const onUpdate: Entity['onUpdate'] = (fn) => _setUpdate((_) => fn);
 
 	const sanitizeAnimName = (name: string): string => {
 		const [_dir, _name] = name.split('.')[0].split('/');
@@ -291,6 +289,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 				loadModel(modelExt());
 		}
 	};
+	if (entityConfig.load) loadModelAndAnims(entityConfig.load);
 
 	const update: Entity['update'] = (timeInSeconds) => {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -300,17 +299,17 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (mixer) mixer.update(timeInSeconds);
 
-		const frameDecceleration = new Vector3(
-			velocity().x * decceleration().x,
-			velocity().y * decceleration().y,
-			velocity().z * decceleration().z
+		const frameDeceleration = new Vector3(
+			velocity().x * deceleration().x,
+			velocity().y * deceleration().y,
+			velocity().z * deceleration().z
 		);
-		frameDecceleration.multiplyScalar(timeInSeconds);
-		frameDecceleration.z =
-			Math.sign(frameDecceleration.z) *
-			Math.min(Math.abs(frameDecceleration.z), Math.abs(velocity()!.z));
+		frameDeceleration.multiplyScalar(timeInSeconds);
+		frameDeceleration.z =
+			Math.sign(frameDeceleration.z) *
+			Math.min(Math.abs(frameDeceleration.z), Math.abs(velocity()!.z));
 
-		velocity()!.add(frameDecceleration);
+		velocity()!.add(frameDeceleration);
 
 		const _Q = new Quaternion();
 		const _A = new Vector3();
@@ -363,13 +362,74 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		target()!.position.add(_upways);
 		target()!.position.add(_sideways);
 
-		setCamera((_camera) => {
-			// _camera.quaternion.copy(_R);
-			_camera.position.add(_forward);
-			_camera.position.add(_upways);
-			_camera.position.add(_sideways);
-			return _camera;
-		});
+		let collided = false;
+		if ('collidesWith' in state) {
+			for (const collider of state.collidesWith as Group[]) {
+				const buildingBox = new Box3().setFromObject(collider);
+				// while (true) {
+				const playerBox = new Box3().setFromObject(target()!);
+
+				if (buildingBox.intersectsBox(playerBox)) {
+					const intersectionBox = buildingBox.intersect(playerBox);
+					console.log(JSON.stringify(intersectionBox));
+					const help = new Box3Helper(
+						intersectionBox,
+						new Color(0xff0000)
+					);
+
+					setScene(produce((scene) => scene.add(help)));
+
+					const xSign = Math.sign(_forward.x);
+					const zSign = Math.sign(_forward.z);
+					const dist =
+						playerBox.distanceToPoint(
+							buildingBox.getSize(new Vector3())
+						) / 100;
+					target()!.position.sub(
+						_forward.add(new Vector3(xSign * dist, 0, zSign * dist))
+					);
+
+					// const targetX = target()!.clone();
+					// targetX.position.add(new Vector3(_forward.x, 0, 0));
+					// const targetZ = target()!.clone();
+					// targetZ.position.add(new Vector3(0, 0, _forward.z));
+
+					// const playerBoxX = new Box3().setFromObject(targetX);
+					// const playerBoxZ = new Box3().setFromObject(targetZ);
+
+					// if (buildingBox.intersectsBox(playerBoxX)) {
+					// 	target()!.position.sub(
+					// 		new Vector3(_forward.x, 0, 0) //.clone().multiplyScalar(0.1)
+					// 	);
+					// }
+
+					// if (buildingBox.intersectsBox(playerBoxZ)) {
+					// 	target()!.position.sub(
+					// 		new Vector3(0, 0, _forward.z) //.clone().multiplyScalar(0.1)
+					// 	);
+					// }
+
+					// target()!.position.sub(
+					// 	_upways.clone().multiplyScalar(0.1)
+					// );
+					// target()!.position.sub(
+					// 	_sideways.clone().multiplyScalar(0.1)
+					// );
+					// } else breaks;
+				}
+			}
+		}
+
+		if (collided) {
+		} else {
+			setCamera((_camera) => {
+				// _camera.quaternion.copy(_R);
+				_camera.position.add(_forward);
+				_camera.position.add(_upways);
+				_camera.position.add(_sideways);
+				return _camera;
+			});
+		}
 
 		if (_update()) _update()!(timeInSeconds);
 	};
@@ -381,6 +441,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		modelDir,
 		modelName,
 		modelExt,
+		getModelPath,
 		modelReady,
 
 		animsDir, // note: this is a default
@@ -396,7 +457,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		shadow,
 		velocity,
 		acceleration,
-		decceleration,
+		deceleration,
 
 		target,
 		skellyboi,
@@ -423,7 +484,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		setShadow,
 		setVelocity,
 		setAcceleration,
-		setDecceleration,
+		setDeceleration,
 
 		setTarget,
 		setManager,
@@ -433,7 +494,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		onUpdate,
 		readyForStateChange,
 		toDefaultState,
-		toggleAdditAction: toggleAdditAction,
+		toggleAdditAction,
 		loadModelAndAnims,
 		update,
 	};

@@ -12,14 +12,23 @@ import { StateBuilderMap } from '../../types/State';
 import XRay from '../XRay';
 import { clamp } from 'three/src/math/MathUtils';
 import usePathRider from '../../hooks/usePathRider';
-import { Mesh, MeshPhongMaterial, Vector3 } from 'three';
+import {
+	Box3,
+	Box3Helper,
+	Color,
+	Mesh,
+	MeshPhongMaterial,
+	Vector2,
+	Vector3,
+} from 'three';
 import { Response, StateManagerConfig } from '../../hooks/useStateManager';
+import { produce } from 'solid-js/store';
 
 const degToRad = (deg: number) => deg * (Math.PI / 180);
 
 const RAD90 = degToRad(90);
 const RAD180 = degToRad(180);
-const calcLargestY = (
+const calcPosExtremes = (
 	hipAngle: number,
 	femurLen: number,
 	kneeAngle: number,
@@ -31,16 +40,33 @@ const calcLargestY = (
 	//? if should calc from the knee instead of the foot
 	//* it doesn't actually match my calculations... but it seems to work so whatever
 	if (!(hipAngle + (RAD180 - Math.abs(kneeAngle)) <= RAD90))
-		return femurLen * Math.cos(hipAngle);
+		return new Vector2(
+			femurLen * Math.sin(hipAngle),
+			femurLen * Math.cos(hipAngle)
+		);
 
 	const bigHyp = Math.sqrt(
 		Math.pow(femurLen, 2) +
 			Math.pow(tibiaLen, 2) -
 			2 * femurLen * tibiaLen * Math.cos(kneeAngle)
 	);
-	const adjAngle = Math.asin((tibiaLen * Math.sin(kneeAngle)) / bigHyp);
+	const angle =
+		hipAngle + Math.asin((tibiaLen * Math.sin(kneeAngle)) / bigHyp);
 
-	return bigHyp * Math.cos(hipAngle + adjAngle);
+	return new Vector2(bigHyp * Math.sin(angle), bigHyp * Math.cos(angle));
+};
+
+const calcFarthestX = (
+	hipAngle: number,
+	femurLen: number,
+	kneeAngle: number,
+	tibiaLen: number
+) => {
+	const bigHyp = Math.sqrt(
+		Math.pow(femurLen, 2) +
+			Math.pow(tibiaLen, 2) -
+			2 * femurLen * tibiaLen * Math.cos(kneeAngle)
+	);
 };
 
 const namesToMatch = ['idle', 'walk', 'walk-backward', 'run', 'run-backward'];
@@ -55,6 +81,23 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 	const player = createEntity({
 		scene,
 		camera,
+		load: {
+			parentDir: 'qwop',
+			modelName: 'character',
+			modelExt: 'fbx',
+			animNames: [
+				'idle',
+				'walk',
+				'walk-backward',
+				'run',
+				'run-backward',
+				'jump',
+				'dance',
+				'falling-down',
+				'down',
+			],
+			additAnimNames: ['walk-injured'],
+		},
 		state: {
 			pathRider: {
 				input: 0,
@@ -66,24 +109,31 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 					angle: 0,
 					min: -Math.PI / 3.5,
 					max: Math.PI / 1.7,
+					pos: new Vector2(0, 0),
 				},
 				LeftUpLeg: {
 					axis: new Vector3(1, 0, 0),
 					angle: 0,
 					min: -Math.PI / 3.5,
 					max: Math.PI / 1.7,
+					pos: new Vector2(0, 0),
 				},
 				RightLeg: {
 					axis: new Vector3(1, 0, 0),
 					angle: 0,
 					min: -Math.PI / 2,
 					max: 0,
+					pos: new Vector2(0, 0),
 				},
 				LeftLeg: {
 					axis: new Vector3(1, 0, 0),
 					angle: 0,
 					min: -Math.PI / 2,
 					max: 0,
+					pos: new Vector2(0, 0),
+				},
+				Dick: {
+					pos: new Vector2(0, 0),
 				},
 			},
 			limbControls: {
@@ -96,28 +146,43 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 				// LeftLegForward: false,
 				// LeftLegBackward: false,
 			},
-			gravity: 0.1,
+			gravity: 0.01,
+			velFromGravity: 0,
 			targetY: 0,
+			rotation: 0,
 		},
 	});
 
-	player.loadModelAndAnims({
-		parentDir: 'qwop',
-		modelName: 'character',
-		modelExt: 'fbx',
-		animNames: [
-			'idle',
-			'walk',
+	const fsm: StateBuilderMap = {
+		idle: createState('idle'),
+		walk: createState('walk', matchTimeOnEnter(namesToMatch)),
+		'walk-backward': createState(
 			'walk-backward',
-			'run',
+			matchTimeOnEnter(namesToMatch)
+		),
+		run: createState('run', matchTimeOnEnter(namesToMatch)),
+		'run-backward': createState(
 			'run-backward',
-			'jump',
-			'dance',
-			'falling-down',
-			'down',
-		],
-		additAnimNames: ['walk-injured'],
-	});
+			matchTimeOnEnter(namesToMatch)
+		),
+		jump: createState('jump'),
+		dance: createState('dance'),
+		'falling-down': createState('falling-down', {
+			update: ({ changeState }) => {
+				if (player.state.timers['falling-down'] > 0.9)
+					changeState('down');
+			},
+		}),
+		down: createState('down', {
+			enter: ({ action }) => {
+				player.target()?.rotateY(-Math.PI / 2);
+				action.play();
+			},
+			cleanup: () => player.target()?.rotateY(Math.PI / 2),
+		}),
+	};
+
+	player.setStateMachine(useAnimStateMachine(player, fsm));
 
 	const inputConfig = {
 		channels: {
@@ -196,25 +261,10 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 				'no-op';
 			},
 		},
-		post: (result) => {
-			//! create a thing to handle no-op, locked, unlock, etc.
-			//! for more granular state control
-			// let _result = result;
-			// if (
-			// 	lastResult &&
-			// 	from === 'useInputs' &&
-			// 	lastResult[0] === 'no-op'
-			// ) {
-			// 	_result = 'no-op';
-			// }
-			// lastResult = [result as string, from as string];
-
-			if (result === 'no-op') return;
-			console.log(result);
-			return result
+		post: (result) =>
+			result
 				? player.stateMachine()?.changeState(result as string)
-				: player.toDefaultState();
-		},
+				: player.toDefaultState(),
 	};
 
 	//? fnProps: [curr, prev, mostRecent, prevMostRecent]
@@ -231,37 +281,6 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 	};
 
 	inputs?.listen(inputConfig, keybindConfig, stateManagerConfig);
-
-	const fsm: StateBuilderMap = {
-		idle: createState('idle'),
-		walk: createState('walk', matchTimeOnEnter(namesToMatch)),
-		'walk-backward': createState(
-			'walk-backward',
-			matchTimeOnEnter(namesToMatch)
-		),
-		run: createState('run', matchTimeOnEnter(namesToMatch)),
-		'run-backward': createState(
-			'run-backward',
-			matchTimeOnEnter(namesToMatch)
-		),
-		jump: createState('jump'),
-		dance: createState('dance'),
-		'falling-down': createState('falling-down', {
-			update: ({ changeState }) => {
-				if (player.state.timers['falling-down'] > 0.9)
-					changeState('down');
-			},
-		}),
-		down: createState('down', {
-			enter: ({ action }) => {
-				player.target()?.rotateY(-Math.PI / 2);
-				action.play();
-			},
-			cleanup: () => player.target()?.rotateY(Math.PI / 2),
-		}),
-	};
-
-	player.setStateMachine(useAnimStateMachine(player, fsm));
 
 	return player;
 };
@@ -368,6 +387,7 @@ function GameWindow() {
 		};
 		//! This function is essential, but full of dumb shit
 		//! Would not recommend trying to read it
+		let done = false;
 		const updateLimbRotation = () => {
 			const limbNames = Object.keys(player.state.limbs);
 			player.scene.updateMatrixWorld();
@@ -384,6 +404,17 @@ function GameWindow() {
 
 			// console.log(player.scene.getWorldPosition(new Vector3()));
 
+			if (!done) {
+				const target = player.target();
+				if (!target) return;
+				console.log(player.target()!.name);
+				console.log(player.target()!.toJSON());
+				const box = new Box3().setFromObject(player.target()!, true);
+				console.log(JSON.stringify(box.getSize(new Vector3())));
+				const help = new Box3Helper(box, new Color(0xff0000));
+				player.setScene(produce((_scene) => _scene.add(help)));
+				done = true;
+			}
 			player.target()?.traverse((child) => {
 				// const posY = child.getWorldPosition(vec).y;
 
@@ -395,6 +426,8 @@ function GameWindow() {
 				) {
 					const limb = player.state.limbs[limbName!];
 					child.rotateOnAxis(limb.axis, limb.angle);
+
+					// console.log(JSON.stringify(child));
 				}
 
 				player.scene.updateMatrixWorld();
@@ -415,47 +448,177 @@ function GameWindow() {
 		};
 
 		const LIMB_LEN = 4;
+		const FEMUR_LEN = 5;
+		const TIBIA_LEN = 4;
 		const detLowestY = () => {
-			const { RightUpLeg, RightLeg, LeftUpLeg, LeftLeg } =
+			const { RightLeg, LeftLeg } = player.state.limbs;
+			const largest = Math.max(RightLeg.pos.y, LeftLeg.pos.y);
+
+			return FEMUR_LEN + TIBIA_LEN - largest;
+		};
+
+		const updateLimbPos = () => {
+			const { RightUpLeg, RightLeg, LeftUpLeg, LeftLeg, Dick } =
 				player.state.limbs;
 
-			const largestRight = calcLargestY(
-				RightUpLeg.angle,
-				LIMB_LEN,
-				RightLeg.angle,
-				LIMB_LEN
-			);
-			const largestLeft = calcLargestY(
-				LeftUpLeg.angle,
-				LIMB_LEN,
-				LeftLeg.angle,
-				LIMB_LEN
-			);
+			player.setState('limbs', (limbs: typeof player.state.limbs) => {
+				limbs.RightLeg.pos = calcPosExtremes(
+					RightUpLeg.angle,
+					FEMUR_LEN,
+					RightLeg.angle,
+					TIBIA_LEN
+				);
+				limbs.LeftLeg.pos = calcPosExtremes(
+					LeftUpLeg.angle,
+					FEMUR_LEN,
+					LeftLeg.angle,
+					TIBIA_LEN
+				);
+				limbs.Dick.pos.y = FEMUR_LEN + TIBIA_LEN + player.state.targetY;
 
-			const largest = Math.max(largestRight, largestLeft);
+				return limbs;
+			});
 
-			return 2 * LIMB_LEN - largest;
+			// console.log(
+			// 	-player.state.limbs.RightLeg.pos.y +
+			// 		player.state.limbs.Dick.pos.y
+			// );
 		};
+
+		/**
+		 *  planted
+		 * left right farther R-forward L-forward  output
+		 * 0    0     0       0         0          x
+		 * 0    0     0       0         1          x
+		 * 0    0     0       1         0          x
+		 * 0    0     0       1         1          x
+		 * 0    0     1       0         0          x
+		 * 0    0     1       0         1          x
+		 * 0    0     1       1         0          x
+		 * 0    0     1       1         1          x
+		 * 0    1     0       0         0          forward (bc both behind)
+		 * 0    1     0       0         1          forward (bc planted foot behind, unplanted foot forward)
+		 * 0    1     0       1         0          backward (bc planted foot forward, unplanted foot behind)
+		 * 0    1     0       1         1          backward (bc both forward)
+		 * 0    1     1       0         0          forward (bc both behind)
+		 * 0    1     1       0         1          forward (bc planted foot behind, unplanted foot forward)
+		 * 0    1     1       1         0          backward (bc planted foot forward, unplanted foot behind)
+		 * 0    1     1       1         1          backward (bc both forward)
+		 * 1    0     0       0         0          forward (bc both behind)
+		 * 1    0     0       0         1          backward (bc planted foot forward, unplanted foot behind)
+		 * 1    0     0       1         0          forward (bc planted foot behind, unplanted foot forward)
+		 * 1    0     0       1         1          backward (bc both forward)
+		 * 1    0     1       0         0          forward (bc both behind)
+		 * 1    0     1       0         1          backward (bc planted foot forward, unplanted foot behind)
+		 * 1    0     1       1         0          forward (bc planted foot behind, unplanted foot forward)
+		 * 1    0     1       1         1          backward (bc both forward)
+		 * 1    1     0       0         0          forward (bc both behind)
+		 * 1    1     0       0         1          x
+		 * 1    1     0       1         0          x
+		 * 1    1     0       1         1          backward (bc both forward)
+		 * 1    1     1       0         0          forward (bc both behind)
+		 * 1    1     1       0         1          x
+		 * 1    1     1       1         0          x
+		 * 1    1     1       1         1          x
+		 *
+		 * Both forward or backward will fall the opposite direction regardless of
+		 * which foot is planted.
+		 * if both are otherwise planted, don't fall
+		 *
+		 * if planted foot is behind, fall forward
+		 * if planted foot is forward, fall backward
+		 */
 
 		const updatePlayerY = () => {
 			const currY = player.target()?.getWorldPosition(new Vector3()).y;
+			// const currY =
+			// 	player.state.limbs.Dick.pos.y * Math.cos(player.state.rotation);
+			const targetY = player.state.targetY;
 
-			if (currY !== undefined && currY !== player.state.targetY) {
-				let step =
-					player.state.gravity *
-					(currY > player.state.targetY ? -1 : 1);
-				const diff = Math.abs(currY - player.state.targetY);
-				step = diff < step ? diff : step;
+			if (currY !== undefined && currY !== targetY) {
+				const falling = currY > targetY;
+				// const diff = Math.abs(currY - targetY);
+				// player.setState(
+				// 	'velFromGravity',
+				// 	(vel: number) => vel + player.state.gravity
+				// );
+
+				// let step;
+				// if (!falling) {
+				// 	step = diff;
+				// } else {
+				// 	step =
+				// 		player.state.velFromGravity *
+				// 		(currY > targetY ? -1 : 1);
+				// 	step = diff < step ? diff : step;
+				// }
+				const step = Math.abs(currY - targetY) * (falling ? -1 : 1);
 				player.target()?.translateY(step);
-			}
+			} else player.setState('velFromGravity', 0);
 		};
+
+		const updatePlayerRotation = () => {
+			const { RightLeg, LeftLeg } = player.state.limbs;
+			const dickY =
+				player.state.limbs.Dick.pos.y * Math.cos(player.state.rotation);
+
+			const rightLegForward = RightLeg.pos.x > 0;
+			const leftLegForward = LeftLeg.pos.x > 0;
+			const rightFootPlanted = dickY - RightLeg.pos.y === 0;
+			const leftFootPlanted = dickY - LeftLeg.pos.y === 0;
+
+			// if both are planted, don't fall
+			if (
+				rightFootPlanted &&
+				leftFootPlanted &&
+				rightLegForward !== leftLegForward
+			)
+				return;
+
+			// both forward or both backward
+			// if (rightLegForward === leftLegForward || rightFootPlanted) {
+			// const dir = rightFootPlanted ? leftFootPlanted ? -1 : 1;
+			// let dir;
+			// if (rightFootPlanted) {
+			// 	dir = rightLegForward ? -1 : 1;
+			// } else {
+			// 	dir = leftLegForward ? -1 : 1;
+			// }
+			const dir = rightFootPlanted
+				? rightLegForward
+					? -1
+					: 1
+				: leftLegForward
+				? -1
+				: 1;
+			const step = dir * player.state.gravity;
+			player.target()?.rotateX(dir * player.state.gravity);
+			player.setState('rotation', (rot: number) => rot + step);
+			// }
+
+			// if (leftFootPlanted) {
+			// 	const dir = leftLegForward ? -1 : 1;
+			// 	player.target()?.rotateX(dir * player.state.gravity);
+			// }
+		};
+
+		// createEffect(() => {
+		// 	if (
+		// 		player.state.limbControls.RightUpLegForward ||
+		// 		player.state.limbControls.RightUpLegBackward
+		// 	) {
+		// 		console.log(JSON.stringify(player.state.limbs.RightLeg.pos));
+		// 	}
+		// });
 
 		player.onUpdate(() => {
 			updatePathRider();
 			updateLimbState();
 			updateLimbRotation();
 			player.setState('targetY', -detLowestY());
+			updateLimbPos();
 			updatePlayerY();
+			updatePlayerRotation();
 		});
 
 		// const demo2 = createDemo(xRay);
@@ -485,6 +648,10 @@ function GameWindow() {
 		//? color the model
 		createEffect(() => {
 			if (player?.modelReady()) {
+				// player.skellyboi()?.bones.forEach((bone) => {
+				// 	console.log(JSON.stringify(bone));
+				// });
+
 				player.target()?.traverse((child) => {
 					(child as Mesh).material = new MeshPhongMaterial({
 						color: child.name.includes('Beta_Surface')

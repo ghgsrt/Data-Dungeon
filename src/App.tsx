@@ -4,6 +4,7 @@ import InputExample from './components/InputExample';
 import Example from './components/Example';
 import globalStore from './global';
 import Practice from './components/practice/Practice';
+import Overworld from './components/QWOP/Overworld';
 
 function App() {
 	const [currentDemoTitle, setCurrentDemoTitle] = createSignal<string>('');
@@ -15,12 +16,13 @@ function App() {
 	//? Key: title of your demo
 	//? Value: your demo component
 	//* that's all you have to do!
-	const demoMenu: Record<string, JSX.Element> = {
-		'Example Comp.': <Example />,
-		'useInput Example': <InputExample />,
+	const demoMenu: Record<string, () => JSX.Element> = {
+		// 'Example Comp.': () => <Example />,
+		// 'useInput Example': () => <InputExample />,
 		// Model: <Model />,
-		QWOP: <GameWindow />,
-		Practice: <Practice />,
+		QWOP: () => <GameWindow />,
+		XRay: () => <Practice />,
+		Overworld: () => <Overworld />,
 	};
 
 	return (
@@ -42,7 +44,7 @@ function App() {
 					)}
 				</For>
 			</div>
-			<div class="h-screen flex-1">{demoMenu[currentDemoTitle()]}</div>
+			<div class="h-screen flex-1">{demoMenu[currentDemoTitle()]?.()}</div>
 		</div>
 	);
 }

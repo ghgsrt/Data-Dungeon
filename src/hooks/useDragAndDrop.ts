@@ -28,10 +28,7 @@ export const useDragAndDrop = (element: HTMLElement, options?: DnDOptions) => {
 	});
 
 	const any = (event?: MouseEvent) => {
-		if (!_element()) {
-			console.log('oh no');
-			return;
-		}
+		if (!_element()) return;
 
 		updateOffsets();
 		if (onAny()) onAny()!(event);

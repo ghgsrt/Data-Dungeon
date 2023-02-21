@@ -51,19 +51,6 @@ export type StateBuilderMap = Record<string, StateBuilderFn>;
 export interface FiniteStateMachine {
 	states: StateBuilderMap;
 	currentState: Accessor<State | undefined>;
-	// keybindConfig: Accessor<KeybindConfig | undefined>;
-	// setKeybindConfig: (config: KeybindConfig) => void;
-	addState: (name: string, builderFn: StateBuilderFn) => void;
-	addStates: (states: StateBuilderMap) => void;
-	changeState: (name: string, callExit?: boolean) => void;
-	update: (timeElapsed: number) => void;
-}
-
-export interface TestFiniteStateMachine {
-	states: Record<string, number>;
-	currentState: Accessor<State | undefined>;
-	// keybindConfig: Accessor<KeybindConfig | undefined>;
-	// setKeybindConfig: (config: KeybindConfig) => void;
 	addState: (name: string, builderFn: StateBuilderFn) => void;
 	addStates: (states: StateBuilderMap) => void;
 	changeState: (name: string, callExit?: boolean) => void;
