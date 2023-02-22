@@ -56,7 +56,8 @@ export interface LoadModelsConfig {
 export type CreateCustomEntity<I extends KeysOrCodes = Codes> = (
 	scene: Scene,
 	camera: Camera,
-	inputs?: ReturnType<typeof useInputs<I>>
+	inputs?: ReturnType<typeof useInputs<I>>,
+	useSkelly?: boolean
 ) => Entity;
 
 export interface Entity {
@@ -112,6 +113,7 @@ export interface Entity {
 	setDeceleration: Setter<Vector3>;
 
 	setTarget: Setter<Group>;
+	setSkellyboi: Setter<SkeletonHelper | undefined>;
 	setManager: SetStoreFunction<LoadingManager>;
 
 	setState: SetStoreFunction<Record<string, any>>;

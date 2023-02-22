@@ -19,13 +19,21 @@ const matchTimeOnEnter = (names: string[]): CreateStateFns => ({
 		action.play();
 	},
 });
-const createTestPlayer: CreateCustomEntity = (scene, camera, inputs) => {
-	const testPlayer = createEntity({
-		scene,
-		camera,
-		// just variables tied to this entity
-		// state: {},
-	});
+const createTestPlayer: CreateCustomEntity = (
+	scene,
+	camera,
+	inputs,
+	useSkelly = true
+) => {
+	const testPlayer = createEntity(
+		{
+			scene,
+			camera,
+			// just variables tied to this entity
+			// state: {},
+		},
+		useSkelly
+	);
 
 	testPlayer.loadModelAndAnims({
 		parentDir: 'qwop',
@@ -115,7 +123,7 @@ function Practice() {
 
 	onMount(() => {
 		const demo = createDemo(container);
-		const player = createTestPlayer(demo.scene, demo.camera, inputs);
+		const player = createTestPlayer(demo.scene, demo.camera, inputs, false);
 		demo.setControls(player);
 
 		const demo2 = createDemo(xRay);
@@ -138,7 +146,7 @@ function Practice() {
 				});
 			}
 		});
-		
+
 		createEffect(() => {
 			if (activeComponent() === 'XRay') {
 				demo.onWindowResize();
