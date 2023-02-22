@@ -390,17 +390,17 @@ function GameWindow() {
 
 			// console.log(player.scene.getWorldPosition(new Vector3()));
 
-			if (!done) {
-				const target = player.target();
-				if (!target) return;
-				console.log(player.target()!.name);
-				console.log(player.target()!.toJSON());
-				const box = new Box3().setFromObject(player.target()!, true);
-				console.log(JSON.stringify(box.getSize(new Vector3())));
-				const help = new Box3Helper(box, new Color(0xff0000));
-				player.setScene(produce((_scene) => _scene.add(help)));
-				done = true;
-			}
+			// if (!done) {
+			// 	const target = player.target();
+			// 	if (!target) return;
+			// 	console.log(player.target()!.name);
+			// 	console.log(player.target()!.toJSON());
+			// 	const box = new Box3().setFromObject(player.target()!, true);
+			// 	console.log(JSON.stringify(box.getSize(new Vector3())));
+			// 	const help = new Box3Helper(box, new Color(0xff0000));
+			// 	player.setScene(produce((_scene) => _scene.add(help)));
+			// 	done = true;
+			// }
 			player.target()?.traverse((child) => {
 				// const posY = child.getWorldPosition(vec).y;
 
@@ -672,7 +672,7 @@ function GameWindow() {
 				<div ref={xRay} class="absolute" />
 			</XRay> */}
 			<div class="flex h-1/6 w-full items-center bg-black">
-				<button
+				{/* <button
 					class="h-full w-1/12 bg-white"
 					// onClick={() =>
 					// 	player.setState('injured', (i: boolean) => !i)
@@ -680,7 +680,7 @@ function GameWindow() {
 					onClick={toggleBeans}
 				>
 					gimp
-				</button>
+				</button> */}
 				<svg
 					viewBox="0 0 350 285"
 					class="flex-1"

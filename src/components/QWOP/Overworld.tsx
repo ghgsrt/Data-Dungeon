@@ -181,18 +181,15 @@ function Overworld() {
 	const { activeComponent } = globalStore;
 	const inputs = useInputs();
 
-	const setBuilding = (name: string, building: Group) => {
+	const setBuilding = (name: string, building: Group, bBox?: Box3Helper) => {
 		if (!world()) return;
-
-		const box = new Box3().setFromObject(building, true);
-		const help = new Box3Helper(box, new Color(0xff0000));
 
 		setBuildings(name, 'group', building);
 		modifyMutable(
 			world()!.scene,
 			produce((scene) => {
 				scene.add(building);
-				scene.add(help);
+				if (bBox) scene.add(bBox);
 			})
 		);
 
@@ -218,8 +215,14 @@ function Overworld() {
 			building.rotateY(rotation[1]);
 			building.rotateZ(rotation[2]);
 
+			const box = new Box3().setFromObject(building);
+			const bBox = new Box3Helper(box, new Color(0xff0000));
+			// bBox.rotateX(rotation[0]);
+			// bBox.rotateY(rotation[1]);
+			// bBox.rotateZ(rotation[2]);
+
 			const buildingName = path.split('/')[2].split('.')[0];
-			setBuilding(buildingName, building);
+			setBuilding(buildingName, building, bBox);
 		});
 	};
 

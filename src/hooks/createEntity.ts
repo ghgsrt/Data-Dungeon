@@ -50,7 +50,7 @@ const reconcileOptions = (options?: Partial<EOptionsConfig>) => {
 	return _options as unknown as EOptionsConfig;
 };
 
-function createEntity(entityConfig: EntityConfig): Entity {
+function createEntity(entityConfig: EntityConfig, useSkelly = true): Entity {
 	const [scene, setScene] = createStore(entityConfig.scene);
 	const [camera, setCamera] = createStore(entityConfig.camera);
 
@@ -257,7 +257,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 				setScene(
 					produce((_scene) => {
 						_scene.add(_target);
-						_scene.add(skellyboi);
+						if (useSkelly) _scene.add(skellyboi);
 					})
 				);
 
@@ -491,6 +491,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		setDeceleration,
 
 		setTarget,
+		setSkellyboi,
 		setManager,
 
 		setState,
