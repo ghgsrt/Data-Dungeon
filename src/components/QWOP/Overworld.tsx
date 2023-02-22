@@ -1,15 +1,11 @@
 import { createEffect, createSignal, onMount } from 'solid-js';
 import { createStore, modifyMutable, produce } from 'solid-js/store';
 import {
-	AnimationAction,
 	Box3,
 	Box3Helper,
-	BufferGeometry,
 	Color,
-	Euler,
 	Group,
 	LoopOnce,
-	Matrix4,
 	PerspectiveCamera,
 	PlaneGeometry,
 	Quaternion,
@@ -196,12 +192,12 @@ function Overworld() {
 			world()!.scene,
 			produce((scene) => {
 				scene.add(building);
-                scene.add(help);
-            })
+				scene.add(help);
+			})
 		);
 
 		world()!
-			.controls()!
+			.controls()! //? player
 			.setState(
 				'collidesWith',
 				produce((arr: Group[]) => arr.push(building))
@@ -283,66 +279,6 @@ function Overworld() {
 			loadBuilding(path, position, rotation);
 		}
 
-		// player.onUpdate(() => {
-		// 	if (!player.target()) return;
-
-		// 	for (const building in buildings) {
-		// 		if (buildings[building].group) {
-		// 			const buildingBox = new Box3().setFromObject(
-		// 				buildings[building].group!
-		// 			);
-		// 			const playerBox = new Box3().setFromObject(
-		// 				player.target()!
-		// 			);
-
-		// 			player.setState(
-		// 				'colliding',
-		// 				buildingBox.intersectsBox(playerBox)
-		// 			);
-
-		// 			// if (playerPos.x > buildingPos[0] && playerPos.x < size.x) {
-		// 			// 	if (
-		// 			// 		playerPos.x + 1 > buildingPos[0] &&
-		// 			// 		playerPos.x + 1 < size.x
-		// 			// 	) {
-		// 			// 		player
-		// 			// 			.target()!
-		// 			// 			.position.add(new Vector3(-1, 0, 0));
-		// 			// 	} else {
-		// 			// 		player.target()!.position.add(new Vector3(1, 0, 0));
-		// 			// 	}
-		// 			// }
-		// 			// if (playerPos.y > buildingPos[1] && playerPos.y < size.y) {
-		// 			// 	if (
-		// 			// 		playerPos.y + 1 > buildingPos[1] &&
-		// 			// 		playerPos.y + 1 < size.y
-		// 			// 	) {
-		// 			// 		player
-		// 			// 			.target()!
-		// 			// 			.position.add(new Vector3(0, -1, 0));
-		// 			// 	} else {
-		// 			// 		player.target()!.position.add(new Vector3(0, 1, 0));
-		// 			// 	}
-		// 			// }
-		// 			// if (playerPos.z > buildingPos[2] && playerPos.z < size.z) {
-		// 			// 	if (
-		// 			// 		playerPos.z + 1 > buildingPos[2] &&
-		// 			// 		playerPos.z + 1 < size.z
-		// 			// 	) {
-		// 			// 		player
-		// 			// 			.target()!
-		// 			// 			.position.add(new Vector3(0, 0, -1));
-		// 			// 	} else {
-		// 			// 		player.target()!.position.add(new Vector3(0, 0, 1));
-		// 			// 	}
-		// 			// }
-
-		// 			// console.log(JSON.stringify(buildings[building].position));
-		// 			// console.log(JSON.stringify(box.getSize(new Vector3())));
-		// 		}
-		// 	}
-		// });
-
 		modifyMutable(
 			world()!.camera,
 			produce((camera) => {
@@ -373,7 +309,6 @@ function Overworld() {
 					world()!
 						.orbControls()
 						?.target.set(x, y + 12.5, z);
-					// world()!.orbControls()?.target.l
 
 					if (!player.state.mouseClicked) {
 						const cameraPositionOffset = calculateOffset(

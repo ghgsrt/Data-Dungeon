@@ -181,7 +181,8 @@ function createEntity(entityConfig: EntityConfig): Entity {
 	};
 
 	//? "proxy" fn necessary for tracking reactivity when branching into onLoad
-	const passAnimToLoad: typeof onLoad = (a, b, c) => onLoad(a, b, c);
+	// const passAnimToLoad = onLoad; //? no longer necessary, don't even remember what caused it to be in the first place
+	//? leaving here anyway in case it's needed again/for reference
 
 	const loaders: Record<string, ThreeLoader> = {
 		fbx: new FBXLoader(),
@@ -210,7 +211,7 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		const ext = path.split('.')[2];
 		getLoader(ext, manager).load(
 			path,
-			(a) => passAnimToLoad(a, name, isAdditive),
+			(a) => onLoad(a, name, isAdditive),
 			(xhr) =>
 				logLoading(
 					xhr,
@@ -358,15 +359,15 @@ function createEntity(entityConfig: EntityConfig): Entity {
 		_upways.multiplyScalar(velocity().y * timeInSeconds);
 		_forward.multiplyScalar(velocity().z * timeInSeconds);
 
-		target()!.position.add(_forward);
+		// target()!.position.add(_forward);
 		target()!.position.add(_upways);
 		target()!.position.add(_sideways);
 
-		let collided = false;
+		let collidesX = false;
+		let collidesZ = false;
 		if ('collidesWith' in state) {
 			for (const collider of state.collidesWith as Group[]) {
 				const buildingBox = new Box3().setFromObject(collider);
-				// while (true) {
 				const playerBox = new Box3().setFromObject(target()!);
 
 				if (buildingBox.intersectsBox(playerBox)) {
@@ -376,60 +377,63 @@ function createEntity(entityConfig: EntityConfig): Entity {
 						intersectionBox,
 						new Color(0xff0000)
 					);
-
 					setScene(produce((scene) => scene.add(help)));
 
-					const xSign = Math.sign(_forward.x);
-					const zSign = Math.sign(_forward.z);
-					const dist =
-						playerBox.distanceToPoint(
-							buildingBox.getSize(new Vector3())
-						) / 100;
-					target()!.position.sub(
-						_forward.add(new Vector3(xSign * dist, 0, zSign * dist))
-					);
+					const playerX = target()!.clone();
+					playerX.position.add(new Vector3(_forward.x, 0, 0));
+					const playerBoxX = new Box3().setFromObject(playerX);
 
-					// const targetX = target()!.clone();
-					// targetX.position.add(new Vector3(_forward.x, 0, 0));
-					// const targetZ = target()!.clone();
-					// targetZ.position.add(new Vector3(0, 0, _forward.z));
+					const playerZ = target()!.clone();
+					playerZ.position.add(new Vector3(0, 0, _forward.z));
+					const playerBoxZ = new Box3().setFromObject(playerZ);
 
-					// const playerBoxX = new Box3().setFromObject(targetX);
-					// const playerBoxZ = new Box3().setFromObject(targetZ);
-
-					// if (buildingBox.intersectsBox(playerBoxX)) {
-					// 	target()!.position.sub(
-					// 		new Vector3(_forward.x, 0, 0) //.clone().multiplyScalar(0.1)
-					// 	);
-					// }
-
-					// if (buildingBox.intersectsBox(playerBoxZ)) {
-					// 	target()!.position.sub(
-					// 		new Vector3(0, 0, _forward.z) //.clone().multiplyScalar(0.1)
-					// 	);
-					// }
-
-					// target()!.position.sub(
-					// 	_upways.clone().multiplyScalar(0.1)
-					// );
-					// target()!.position.sub(
-					// 	_sideways.clone().multiplyScalar(0.1)
-					// );
-					// } else breaks;
+					if (buildingBox.intersectsBox(playerBoxX)) collidesX = true;
+					if (buildingBox.intersectsBox(playerBoxZ)) collidesZ = true;
 				}
 			}
 		}
+		// if ('collidesWith' in state) {
+		// 	for (const collider of state.collidesWith as Group[]) {
+		// 		const buildingBox = new Box3().setFromObject(collider);
+		// 		const playerBox = new Box3().setFromObject(target()!);
 
-		if (collided) {
-		} else {
-			setCamera((_camera) => {
-				// _camera.quaternion.copy(_R);
-				_camera.position.add(_forward);
-				_camera.position.add(_upways);
-				_camera.position.add(_sideways);
-				return _camera;
-			});
-		}
+		// 		if (buildingBox.intersectsBox(playerBox)) {
+		// 			const intersectionBox = buildingBox.intersect(playerBox);
+		// 			console.log(JSON.stringify(intersectionBox));
+		// 			const help = new Box3Helper(
+		// 				intersectionBox,
+		// 				new Color(0xff0000)
+		// 			);
+
+		// 			setScene(produce((scene) => scene.add(help)));
+
+		// 			const xSign = Math.sign(_forward.x);
+		// 			const zSign = Math.sign(_forward.z);
+		// 			const dist =
+		// 				playerBox.distanceToPoint(
+		// 					buildingBox.getSize(new Vector3())
+		// 				) / 100;
+		// 			target()!.position.sub(
+		// 				_forward.add(new Vector3(xSign * dist, 0, zSign * dist))
+		// 			);
+		// 		}
+		// 	}
+		// }
+
+		const _forwardAdjusted = new Vector3(
+			collidesX ? 0 : _forward.x,
+			_forward.y,
+			collidesZ ? 0 : _forward.z
+		);
+		target()!.position.add(_forwardAdjusted);
+
+		setCamera((_camera) => {
+			// _camera.quaternion.copy(_R);
+			_camera.position.add(_forwardAdjusted);
+			_camera.position.add(_upways);
+			_camera.position.add(_sideways);
+			return _camera;
+		});
 
 		if (_update()) _update()!(timeInSeconds);
 	};

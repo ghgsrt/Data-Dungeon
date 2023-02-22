@@ -28,7 +28,7 @@ const degToRad = (deg: number) => deg * (Math.PI / 180);
 
 const RAD90 = degToRad(90);
 const RAD180 = degToRad(180);
-const calcPosExtremes = (
+const calcLegPosExtremes = (
 	hipAngle: number,
 	femurLen: number,
 	kneeAngle: number,
@@ -54,19 +54,6 @@ const calcPosExtremes = (
 		hipAngle + Math.asin((tibiaLen * Math.sin(kneeAngle)) / bigHyp);
 
 	return new Vector2(bigHyp * Math.sin(angle), bigHyp * Math.cos(angle));
-};
-
-const calcFarthestX = (
-	hipAngle: number,
-	femurLen: number,
-	kneeAngle: number,
-	tibiaLen: number
-) => {
-	const bigHyp = Math.sqrt(
-		Math.pow(femurLen, 2) +
-			Math.pow(tibiaLen, 2) -
-			2 * femurLen * tibiaLen * Math.cos(kneeAngle)
-	);
 };
 
 const namesToMatch = ['idle', 'walk', 'walk-backward', 'run', 'run-backward'];
@@ -156,11 +143,11 @@ const createQWOPPlayer: CreateCustomEntity = (scene, camera, inputs) => {
 	const fsm: StateBuilderMap = {
 		idle: createState('idle'),
 		walk: createState('walk', matchTimeOnEnter(namesToMatch)),
+		run: createState('run', matchTimeOnEnter(namesToMatch)),
 		'walk-backward': createState(
 			'walk-backward',
 			matchTimeOnEnter(namesToMatch)
 		),
-		run: createState('run', matchTimeOnEnter(namesToMatch)),
 		'run-backward': createState(
 			'run-backward',
 			matchTimeOnEnter(namesToMatch)
@@ -359,21 +346,20 @@ function GameWindow() {
 			const legs = ['LeftLeg', 'RightLeg'];
 			const upLegs = ['LeftUpLeg', 'RightUpLeg'];
 			for (let i = 0; i < 2; i++) {
-				const leg = legs[i];
-				const upLeg = upLegs[i];
+				const leg = limbs[legs[i]];
+				const upLeg = limbs[upLegs[i]];
 
-				const min = limbs[leg].min ?? MIN_LOWER;
-				const max = limbs[leg].max ?? MAX_LOWER;
+				const min = leg.min ?? MIN_LOWER;
+				const max = leg.max ?? MAX_LOWER;
 
-				const angleDir = limbs[upLeg].angle > 0 ? -1 : 0.7;
-				const targetAngle =
-					angleDir * (RAD90 - (RAD90 - limbs[upLeg].angle));
-				const dir = limbs[leg].angle > targetAngle ? -1 : 1;
-				const step = dir * (limbs[leg].step ?? STEP_LOWER);
+				const angleDir = upLeg.angle > 0 ? -1 : 0.7;
+				const targetAngle = angleDir * (RAD90 - (RAD90 - upLeg.angle));
+				const dir = leg.angle > targetAngle ? -1 : 1;
+				const step = dir * (leg.step ?? STEP_LOWER);
 
-				player.setState('limbs', leg, 'angle', (angle: number) => {
+				player.setState('limbs', legs[i], 'angle', (angle: number) => {
 					const newAngle =
-						Math.abs(limbs[leg].angle - targetAngle) < step
+						Math.abs(leg.angle - targetAngle) < step
 							? targetAngle
 							: angle + step;
 					return clamp(newAngle, min, max);
@@ -462,13 +448,13 @@ function GameWindow() {
 				player.state.limbs;
 
 			player.setState('limbs', (limbs: typeof player.state.limbs) => {
-				limbs.RightLeg.pos = calcPosExtremes(
+				limbs.RightLeg.pos = calcLegPosExtremes(
 					RightUpLeg.angle,
 					FEMUR_LEN,
 					RightLeg.angle,
 					TIBIA_LEN
 				);
-				limbs.LeftLeg.pos = calcPosExtremes(
+				limbs.LeftLeg.pos = calcLegPosExtremes(
 					LeftUpLeg.angle,
 					FEMUR_LEN,
 					LeftLeg.angle,
@@ -618,7 +604,7 @@ function GameWindow() {
 			player.setState('targetY', -detLowestY());
 			updateLimbPos();
 			updatePlayerY();
-			updatePlayerRotation();
+			// updatePlayerRotation();
 		});
 
 		// const demo2 = createDemo(xRay);
